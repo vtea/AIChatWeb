@@ -150,7 +150,7 @@ export function Pay() {
               Loading
             </div>
           )}
-          <div className={styles["bottom"]}>请使用微信扫码支付</div>
+          <div className={styles["bottom"]}>请使用微信扫码支付(不支持截图扫码)</div>
         </div>
 
         {order && (

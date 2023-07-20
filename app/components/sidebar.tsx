@@ -182,27 +182,14 @@ export function SideBar(props: {
       }`}
     >
       <div className={styles["sidebar-header"]} data-tauri-drag-region>
-        <div
-          className={styles["sidebar-title"]}
-          dangerouslySetInnerHTML={{
-            __html: websiteConfigStore.mainTitle || "AI Chat",
-          }}
-          data-tauri-drag-region
-        ></div>
-        <div
-          className={styles["sidebar-sub-title"]}
-          dangerouslySetInnerHTML={{
-            __html:
-              websiteConfigStore.subTitle || "Build your own AI assistant.",
-          }}
-        ></div>
+      <div className={styles["sidebar-title"]}><NextImage src="/xiaomice.svg" alt="aimiceLogo" /></div>
         <div className={styles["sidebar-logo"] + " no-dark"}>
           {logoLoading ? (
             <></>
           ) : !logoUrl ? (
-            <NextImage src={ChatBotIcon.src} width={44} height={44} alt="bot" />
+            <NextImage src={ChatBotIcon.src} width={44} height={44} alt="AIMICE" />
           ) : (
-            <img src={logoUrl} width={44} height={44} />
+            <img src={logoUrl} width={44} height={44} alt="aimicebot" />
           )}
         </div>
       </div>
@@ -219,7 +206,7 @@ export function SideBar(props: {
           icon={<PluginIcon />}
           text={shouldNarrow ? undefined : Locale.Plugin.Name}
           className={styles["sidebar-bar-button"]}
-          onClick={() => showToast(Locale.WIP)}
+          onClick={() => window.open("https://aiprm.cn2.ltd", "_blank")}
           shadow
         />
       </div>
