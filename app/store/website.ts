@@ -17,8 +17,16 @@ export interface WebsiteConfigStore {
   sensitiveWordsTip: string;
   balanceNotEnough: string;
   registerTypes: string[];
+  registerForInviteCodeOnly: boolean;
+  redeemCodePageTitle: string;
+  redeemCodePageSubTitle: string;
+  redeemCodePageBanner: string;
+  redeemCodePageTop: string;
+  redeemCodePageIndex: string;
+  redeemCodePageBottom: string;
   hideGithubIcon: boolean;
   botHello: string;
+  hideChatLogWhenNotLogin: boolean;
   logoUrl?: string;
   availableModelNames: string[];
   fetchWebsiteConfig: () => Promise<any>;
@@ -32,6 +40,13 @@ export interface WebsiteConfig {
   loginPageSubTitle: string;
   registerPageSubTitle: string;
   registerTypes: string[];
+  registerForInviteCodeOnly: boolean;
+  redeemCodePageTitle: string;
+  redeemCodePageSubTitle: string;
+  redeemCodePageBanner: string;
+  redeemCodePageTop: string;
+  redeemCodePageIndex: string;
+  redeemCodePageBottom: string;
   pricingPageTitle: string;
   pricingPageSubTitle: string;
   payPageTitle: string;
@@ -41,6 +56,7 @@ export interface WebsiteConfig {
   balanceNotEnough: string;
   hideGithubIcon: boolean;
   botHello: string;
+  hideChatLogWhenNotLogin: boolean;
   logoUuid?: string;
   availableModelNames: string[];
 }
@@ -61,6 +77,7 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
       loginPageSubTitle: "",
       registerPageSubTitle: "",
       registerTypes: [] as string[],
+      registerForInviteCodeOnly: false as boolean,
       pricingPageTitle: "",
       pricingPageSubTitle: "",
       payPageTitle: "",
@@ -70,8 +87,15 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
       balanceNotEnough: "",
       hideGithubIcon: false as boolean,
       botHello: "",
+      hideChatLogWhenNotLogin: false as boolean,
       logoUrl: "",
       availableModelNames: [] as string[],
+      redeemCodePageTitle: "",
+      redeemCodePageSubTitle: "",
+      redeemCodePageBanner: "",
+      redeemCodePageTop: "",
+      redeemCodePageIndex: "",
+      redeemCodePageBottom: "",
 
       async fetchWebsiteConfig() {
         const url = "/globalConfig/website";
@@ -104,6 +128,7 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
                 website.registerTypes && website.registerTypes.length
                   ? website.registerTypes
                   : (["OnlyUsername"] as string[]),
+              registerForInviteCodeOnly: website.registerForInviteCodeOnly,
               pricingPageTitle: website.pricingPageTitle,
               pricingPageSubTitle: website.pricingPageSubTitle,
               payPageTitle: website.payPageTitle,
@@ -113,6 +138,13 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
               balanceNotEnough: website.balanceNotEnough,
               hideGithubIcon: website.hideGithubIcon,
               botHello: website.botHello,
+              hideChatLogWhenNotLogin: website.hideChatLogWhenNotLogin,
+              redeemCodePageTitle: website.redeemCodePageTitle || "",
+              redeemCodePageSubTitle: website.redeemCodePageSubTitle || "",
+              redeemCodePageBanner: website.redeemCodePageBanner || "",
+              redeemCodePageTop: website.redeemCodePageTop || "",
+              redeemCodePageIndex: website.redeemCodePageIndex || "",
+              redeemCodePageBottom: website.redeemCodePageBottom || "",
               logoUrl:
                 website.logoUuid !== undefined &&
                 website.logoUuid !== null &&

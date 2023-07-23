@@ -240,7 +240,7 @@ function Screen(props: { logoLoading: boolean; logoUrl?: string }) {
     fetchWechatConfig();
   }, [fetchWechatConfig]);
 
-  const { botHello, icp } = useWebsiteConfigStore();
+  const { botHello, icp, hideChatLogWhenNotLogin } = useWebsiteConfigStore();
   useEffect(() => {
     if (botHello) {
       // todo i18n
@@ -287,9 +287,20 @@ function Screen(props: { logoLoading: boolean; logoUrl?: string }) {
     setFavicon(logoUrl, "");
   }, [logoUrl]);
 
+  const separator =
+    hideChatLogWhenNotLogin &&
+    (
+      [
+        Path.Login,
+        Path.Register,
+        Path.WechatCallback,
+        Path.ForgetPassword,
+      ] as string[]
+    ).includes(location.pathname);
+
   return (
     <>
-      <div className={"body"}>
+      <div className={(separator ? "separator-page " : "") + "body"}>
         <div
           className={
             styles.container +
@@ -306,15 +317,17 @@ function Screen(props: { logoLoading: boolean; logoUrl?: string }) {
             </>
           ) : (
             <>
-              <SideBar
-                className={isHome ? styles["sidebar-show"] : ""}
-                noticeShow={noticeShow}
-                noticeTitle={noticeTitle}
-                noticeContent={noticeContent}
-                setNoticeShow={setNoticeShow}
-                logoLoading={logoLoading}
-                logoUrl={logoUrl}
-              />
+              {!separator && (
+                <SideBar
+                  className={isHome ? styles["sidebar-show"] : ""}
+                  noticeShow={noticeShow}
+                  noticeTitle={noticeTitle}
+                  noticeContent={noticeContent}
+                  setNoticeShow={setNoticeShow}
+                  logoLoading={logoLoading}
+                  logoUrl={logoUrl}
+                />
+              )}
 
               <div className={styles["window-content"]} id={SlotID.AppBody}>
                 <Routes>
@@ -323,16 +336,31 @@ function Screen(props: { logoLoading: boolean; logoUrl?: string }) {
                   <Route path={Path.Masks} element={<MaskPage />} />
                   <Route path={Path.Chat} element={<Chat />} />
                   <Route path={Path.Settings} element={<Settings />} />
-                  <Route path={Path.Login} element={<Login />} />
+                  <Route
+                    path={Path.Login}
+                    element={
+                      <Login logoLoading={logoLoading} logoUrl={logoUrl} />
+                    }
+                  />
                   <Route
                     path={Path.WechatCallback}
                     element={<WechatCallback />}
                   />
 
-                  <Route path={Path.Register} element={<Register />} />
+                  <Route
+                    path={Path.Register}
+                    element={
+                      <Register logoLoading={logoLoading} logoUrl={logoUrl} />
+                    }
+                  />
                   <Route
                     path={Path.ForgetPassword}
-                    element={<ForgetPassword />}
+                    element={
+                      <ForgetPassword
+                        logoLoading={logoLoading}
+                        logoUrl={logoUrl}
+                      />
+                    }
                   />
                   <Route path={Path.Profile} element={<Profile />} />
                   <Route path={Path.Pricing} element={<Pricing />} />
@@ -362,7 +390,8 @@ export function Home() {
 
   const authStore = useAuthStore();
   const [logoLoading, setLogoLoading] = useState(false);
-  const { fetchWebsiteConfig, logoUrl } = useWebsiteConfigStore();
+  const { fetchWebsiteConfig, logoUrl, availableModelNames } =
+    useWebsiteConfigStore();
   useEffect(() => {
     fetchWebsiteConfig();
   }, [fetchWebsiteConfig]);
@@ -370,6 +399,10 @@ export function Home() {
   useEffect(() => {
     console.log("[Config] got config from build time", getClientConfig());
   }, []);
+  useEffect(() => {
+    console.log("set default model", availableModelNames[0]);
+    useAppConfig.getState().modelConfig.model = availableModelNames[0];
+  }, [availableModelNames]);
 
   if (!useHasHydrated()) {
     return <Loading noLogo logoLoading={logoLoading} logoUrl={logoUrl} />;
