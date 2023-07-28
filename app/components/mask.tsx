@@ -446,7 +446,7 @@ export function MaskPage() {
                     color: "var(--black)",
                   }}
                 >
-                  暂无面具
+                  暂无应用
                 </div>
               </div>
             )}

@@ -37,7 +37,7 @@ const cn = {
     },
     Commands: {
       new: "新建聊天",
-      newm: "从面具新建聊天",
+      newm: "从应用新建聊天",
       next: "下一个聊天",
       prev: "上一个聊天",
       clear: "清除上下文",
@@ -52,7 +52,7 @@ const cn = {
         dark: "深色模式",
       },
       Prompt: "快捷指令",
-      Masks: "所有面具",
+      Masks: "所有应用",
       Clear: "清除聊天",
       Settings: "对话设置",
     },
@@ -61,7 +61,7 @@ const cn = {
     Typing: "正在输入…",
     SensitiveWordsTip: (question: string) =>
       `您的提问中包含敏感词：${question}`,
-    BalanceNotEnough: "您的额度不足，请联系管理员",
+    BalanceNotEnough: "您的额度不足，请购买",
     Input: (submitKey: string) => {
       var inputHints = `${submitKey} 发送`;
       if (submitKey === String(SubmitKey.Enter)) {
@@ -72,7 +72,7 @@ const cn = {
     Send: "发送",
     Config: {
       Reset: "清除记忆",
-      SaveAs: "存为面具",
+      SaveAs: "存为应用",
     },
   },
   Export: {
@@ -81,14 +81,14 @@ const cn = {
     Download: "下载文件",
     Share: "分享到 ShareGPT",
     MessageFromYou: "来自你的消息",
-    MessageFromChatGPT: "来自 ChatGPT 的消息",
+    MessageFromChatGPT: "来自 Chat 的消息",
     Format: {
       Title: "导出格式",
       SubTitle: "可以导出 Markdown 文本或者 PNG 图片",
     },
     IncludeContext: {
-      Title: "包含面具上下文",
-      SubTitle: "是否在消息中展示面具上下文",
+      Title: "包含应用上下文",
+      SubTitle: "是否在消息中展示应用上下文",
     },
     Steps: {
       Select: "选取",
@@ -110,7 +110,7 @@ const cn = {
     ResetConfirm: "确认清空历史摘要？",
   },
   Home: {
-    NewChat: "新的聊天",
+    NewChat: "新建对话",
     DeleteChat: "确认删除选中的对话？",
     DeleteToast: "已删除会话",
     Revert: "撤销",
@@ -408,8 +408,8 @@ const cn = {
       SubTitle: "在预览气泡中预览 Markdown 内容",
     },
     Mask: {
-      Title: "面具启动页",
-      SubTitle: "新建聊天时，展示面具启动页",
+      Title: "应用启动页",
+      SubTitle: "新建聊天时，展示应用启动页",
     },
     Prompt: {
       Disable: {
@@ -507,14 +507,14 @@ const cn = {
     Revert: "恢复上下文",
   },
   Plugin: {
-    Name: "插件",
+    Name: "提示词",
   },
   Mask: {
-    Name: "面具",
+    Name: "应用",
     Page: {
-      Title: "预设角色面具",
-      SubTitle: (count: number) => `${count} 个预设角色定义`,
-      Search: "搜索角色面具",
+      Title: "高级应用中心",
+      SubTitle: (count: number) => `${count} 个高级应用`,
+      Search: "搜索角色应用",
       Create: "新建",
     },
     Item: {
@@ -550,8 +550,8 @@ const cn = {
     Skip: "直接开始",
     NotShow: "不再展示",
     ConfirmNoShow: "确认禁用？禁用后可以随时在设置中重新启用。",
-    Title: "挑选一个面具",
-    SubTitle: "现在开始，与面具背后的灵魂思维碰撞",
+    Title: "高级应用中心",
+    SubTitle: "选择合适的应用提高工作效率，这是AI，不是百度",
     More: "查看全部",
   },
 

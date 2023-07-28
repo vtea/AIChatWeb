@@ -172,13 +172,13 @@ export function ForgetPassword(props: {
                   alt="bot"
                 />
               ) : (
-                <img src={props.logoUrl} width={64} height={64} />
+                <img src="/xiaomice.svg" alt="aimiceLogo" />
               )}
             </div>
             <div
               style={{ lineHeight: "100px" }}
               dangerouslySetInnerHTML={{
-                __html: mainTitle || "AI Chat",
+                __html: `<span style="animation: rainbow 15s linear infinite;font-size: 40px;">${mainTitle || "AI Chat"}</span>`,
               }}
               data-tauri-drag-region
             ></div>
