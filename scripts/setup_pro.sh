@@ -58,53 +58,66 @@ echo "Restarting Docker daemon..."
 systemctl restart docker
 
 # Prompt for AIChat Pro private registry credentials
-while true; do
-  echo "Please input AIChat Pro authorized account username:"
-  read -p "Username: " DOCKER_REGISTRY_USERNAME
-  echo "Please input AIChat Pro authorized account password:"
-  read -s -p "Password: " DOCKER_REGISTRY_PASSWORD
+DOCKER_REGISTRY_USERNAME="zsxq-common"
+DOCKER_REGISTRY_PASSWORD="6i8J4XJHG4k4U6YjktQ"
 
-  # Log in to the AIChat Pro private registry
-  echo ""
-  echo "Logging in to Docker private registry..."
-  if docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD http://harbor.nanjiren.online:8099; then
-    break
-  else
-    echo "AIChat Pro authorization failed, please re-enter your account and password."
-  fi
-done
+echo "Logging in to Docker private registry..."
+if docker login -u $DOCKER_REGISTRY_USERNAME -p $DOCKER_REGISTRY_PASSWORD http://harbor.nanjiren.online:8099; then
+  echo "ProHub Login succeeded!"
+else
+  echo "ProHub Login failed!"
+fi
+
 
 # Clone the repository and install dependencies
 echo "curl -o docker-compose.yml..."
 curl -o docker-compose.yml https://raw.githubusercontent.com/Nanjiren01/AIChatWeb/pro/docker-compose.yml
 
+# Setup AIChat super admin account
+echo "#################### Setup super admin account ####################"
+while true; do
+    read -p "Please input the super admin username. Only letters and numbers are supported, the length should between 6 and 20, and they cannot start with a number: " SUPER_USERNAME
+    regex='^[A-Za-z][A-Za-z0-9]{5,19}$'
+    if [[ $SUPER_USERNAME =~ $regex ]]; then
+        echo "Super Admin Username is valid."
+        break
+    else
+        echo "Super Admin Username is invalid. Please try again."
+    fi
+done
 
-echo "Please input the super admin username. "
-echo "Only letters and numbers are supported, the length should between 6 and 20, and they cannot start with a number."
-read -p "Username: " SUPER_USERNAME
-regex='^[A-Za-z][A-Za-z0-9]{5,19}$'
-if [[ $SUPER_USERNAME =~ $regex ]]; then
-    echo "Super Admin Username is valid."
-else
-    echo "Super Admin Username is invalid."
-    exit 1
-fi
-
-echo "Please input the super admin password. "
-echo "Only letters and numbers are supported, and the length should between 6 and 20. "
-echo "You can change it on the web page after the Application running"
-read -p "Password: " SUPER_PASSWORD
-regex='^[A-Za-z0-9]{6,20}$'
-if [[ $SUPER_PASSWORD =~ $regex ]]; then
-    echo "Super Admin Password is valid."
-else
-    echo "Super Admin Password is invalid."
-    exit 1
-fi
+while true; do
+    read -p "Please input the super admin password. Only letters and numbers are supported, and the length should between 6 and 20. You can change it on the web page after the Application running: " SUPER_PASSWORD
+    regex='^[A-Za-z0-9]{6,20}$'
+    if [[ $SUPER_PASSWORD =~ $regex ]]; then
+        echo "Super Admin Password is valid."
+        break
+    else
+        echo "Super Admin Password is invalid. Please try again."
+    fi
+done
 
 sed -i "s/SUPERADMIN_USERNAME:.*/SUPERADMIN_USERNAME: $SUPER_USERNAME/g" docker-compose.yml
 sed -i "s/SUPERADMIN_PASSWORD:.*/SUPERADMIN_PASSWORD: $SUPER_PASSWORD/g" docker-compose.yml
 
+echo "Super admin password has been updated successfully."
+
+# Setup AIChat database password
+
+DB_PASSWORD=$(openssl rand -base64 12)
+
+echo "#################### Setup AIChat database password ####################"
+
+sed -i "s/DB_PASSWORD:.*/DB_PASSWORD: $DB_PASSWORD/g" docker-compose.yml
+sed -i "s/MYSQL_ROOT_PASSWORD:.*/MYSQL_ROOT_PASSWORD: $DB_PASSWORD/g" docker-compose.yml
+
+echo "AIChat database password£º $DB_PASSWORD"
+echo "AIChat Admin Username£º $SUPER_USERNAME"
+echo "AIChat Admin password£º $SUPER_PASSWORD"
+
+echo "Database password has been updated successfully."
+
+# Pull images & Start
 docker compose pull
 
 docker compose up -d
