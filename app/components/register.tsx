@@ -183,7 +183,7 @@ export function Register(props: { logoLoading: boolean; logoUrl?: string }) {
       }
     }
     if (registerForInviteCodeOnly && !inviteCode) {
-      showToast("请输入邀请码！");
+      showToast("Invitation Code！");
       return;
     }
     setLoadingUsage(true);
@@ -303,7 +303,9 @@ export function Register(props: { logoLoading: boolean; logoUrl?: string }) {
             <div
               style={{ lineHeight: "100px" }}
               dangerouslySetInnerHTML={{
-                __html: `<span style="animation: rainbow 15s linear infinite;font-size: 40px;">${mainTitle || "AI Chat"}</span>`,
+                __html: `<span style="animation: rainbow 15s linear infinite;font-size: 40px;">${
+                  mainTitle || "AI Chat"
+                }</span>`,
               }}
               data-tauri-drag-region
             ></div>

@@ -5,7 +5,7 @@ import "./styles/highlight.scss";
 import { getClientConfig } from "./config/client";
 
 export const metadata = {
-  title: "AI Mice Chat Web",
+  title: "Mice",
   description: "Your personal Ai Chat Bot.",
   viewport: {
     width: "device-width",
@@ -17,7 +17,7 @@ export const metadata = {
     { media: "(prefers-color-scheme: dark)", color: "#151515" },
   ],
   appleWebApp: {
-    title: "AI Mice Chat Web",
+    title: "Mice",
     statusBarStyle: "default",
   },
 };
@@ -31,9 +31,8 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="config" content={JSON.stringify(getClientConfig())} />
-        <link rel="manifest" href="/site.webmanifest" />
+        <link rel="manifest" href="/site.webmanifest"></link>
         <script src="/serviceWorkerRegister.js" defer></script>
-        <script src="/crisp.js" defer></script>
       </head>
       <body>{children}</body>
     </html>

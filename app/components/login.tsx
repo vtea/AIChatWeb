@@ -208,7 +208,9 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
             <div
               style={{ lineHeight: "100px" }}
               dangerouslySetInnerHTML={{
-                __html: `<span style="animation: rainbow 15s linear infinite;font-size: 40px;">${mainTitle || "AI Chat"}</span>`,
+                __html: `<span style="animation: rainbow 15s linear infinite;font-size: 40px;">${
+                  mainTitle || "AI Chat"
+                }</span>`,
               }}
               data-tauri-drag-region
             ></div>
@@ -292,7 +294,7 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
                 <IconButton
                   icon={<WechatIcon />}
                   type="second"
-                  text="微信登录"
+                  text="Wechat Login"
                   onClick={() => {
                     clickWechatLoginButton();
                   }}
@@ -324,7 +326,7 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
                 <IconButton
                   icon={<ReturnIcon />}
                   type="second"
-                  text="返回"
+                  text="Go back"
                   onClick={() => {
                     setShowWechatCode(false);
                   }}

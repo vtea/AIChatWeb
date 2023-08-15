@@ -1,8 +1,13 @@
 {
   "ExpandedNodes": [
     "",
-    "\\app"
+    "\\app\\api\\users",
+    "\\app\\api\\users\\[...path]",
+    "\\app\\components",
+    "\\app\\locales",
+    "\\app\\store",
+    "\\public"
   ],
-  "SelectedNode": "\\app\\locales",
+  "SelectedNode": "\\public\\crisp.js",
   "PreviewInSolutionExplorer": false
 }
