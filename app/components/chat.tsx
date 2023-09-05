@@ -430,7 +430,7 @@ export function ChatActions(props: {
   const config = useAppConfig();
   const navigate = useNavigate();
   const chatStore = useChatStore();
-  const { availableModelNames } = useWebsiteConfigStore();
+  const { availableModels } = useWebsiteConfigStore();
 
   // switch themes
   const theme = config.theme;
@@ -448,13 +448,18 @@ export function ChatActions(props: {
 
   // switch model
   const currentModel = chatStore.currentSession().mask.modelConfig.model;
+  const currentContentType =
+    chatStore.currentSession().mask.modelConfig.contentType;
   function nextModel() {
-    const models = availableModelNames;
-    const modelIndex = models.indexOf(currentModel);
+    const models = availableModels;
+    const modelIndex = models.findIndex(
+      (m) => m.name === currentModel && m.contentType === currentContentType,
+    );
     const nextIndex = (modelIndex + 1) % models.length;
     const nextModel = models[nextIndex];
     chatStore.updateCurrentSession((session) => {
-      session.mask.modelConfig.model = nextModel as ModelType;
+      session.mask.modelConfig.model = nextModel.name as ModelType;
+      session.mask.modelConfig.contentType = nextModel.contentType;
       session.mask.syncGlobalConfig = false;
     });
   }
@@ -1093,7 +1098,81 @@ export function Chat() {
                       parentRef={scrollRef}
                       defaultShow={i >= messages.length - 10}
                     />
-
+                    {!isUser &&
+                      ["VARIATION", "IMAGINE", "ZOOMOUT"].includes(
+                        message.attr?.action,
+                      ) &&
+                      message.attr?.status === "SUCCESS" && (
+                        <div
+                          className={[
+                            styles["chat-message-mj-actions"],
+                            styles["column-flex"],
+                          ].join(" ")}
+                        >
+                          <div>
+                            {[1, 2, 3, 4].map((index) => {
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() =>
+                                    doSubmit(
+                                      `UPSCALE::${index}::${message.attr.taskId}`,
+                                    )
+                                  }
+                                  className={`${styles["chat-message-mj-action-btn"]} clickable`}
+                                >
+                                  U{index}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div>
+                            {[1, 2, 3, 4].map((index) => {
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() =>
+                                    doSubmit(
+                                      `VARIATION::${index}::${message.attr.taskId}`,
+                                    )
+                                  }
+                                  className={`${styles["chat-message-mj-action-btn"]} clickable`}
+                                >
+                                  V{index}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    {!isUser &&
+                      ["UPSCALE"].includes(message.attr?.action) &&
+                      message.attr?.status === "SUCCESS" && (
+                        <div
+                          className={[
+                            styles["chat-message-mj-actions"],
+                            styles["column-flex"],
+                          ].join(" ")}
+                        >
+                          <div>
+                            {[1.5, 2].map((index) => {
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() =>
+                                    doSubmit(
+                                      `ZOOMOUT::${index}::${message.attr.taskId}`,
+                                    )
+                                  }
+                                  className={`${styles["chat-message-mj-action-btn"]} clickable ${styles["zoom-out"]}`}
+                                >
+                                  Z×{index}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     {showActions && (
                       <div className={styles["chat-message-actions"]}>
                         <div
@@ -1171,14 +1250,24 @@ export function Chat() {
             setUserInput("/");
             onSearch("");
           }}
-          plugins={pluignModels}
+          plugins={
+            session.mask?.modelConfig?.contentType !== "Image"
+              ? pluignModels
+              : []
+          }
           SetOpenInternet={SetOpenInternet}
         />
         <div className={styles["chat-input-panel-inner"]}>
           <textarea
             ref={inputRef}
             className={styles["chat-input"]}
-            placeholder={Locale.Chat.Input(submitKey)}
+            placeholder={Locale.Chat.Input(
+              submitKey,
+              session.mask?.modelConfig?.contentType === "Image"
+                ? Locale.Chat.Draw
+                : Locale.Chat.Send,
+              session.mask?.modelConfig?.contentType !== "Image",
+            )}
             onInput={(e) => onInput(e.currentTarget.value)}
             value={userInput}
             onKeyDown={onInputKeyDown}
@@ -1192,7 +1281,11 @@ export function Chat() {
           />
           <IconButton
             icon={<SendWhiteIcon />}
-            text={Locale.Chat.Send}
+            text={
+              session.mask?.modelConfig?.contentType === "Image"
+                ? Locale.Chat.Draw
+                : Locale.Chat.Send
+            }
             className={styles["chat-input-send"]}
             type="primary"
             onClick={() => doSubmit(userInput)}
