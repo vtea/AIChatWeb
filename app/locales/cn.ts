@@ -62,7 +62,7 @@ const cn = {
     Typing: "正在输入…",
     SensitiveWordsTip: (question: string) =>
       `您的提问中包含敏感词：${question}`,
-    BalanceNotEnough: "您的额度不足，请联系管理员",
+    BalanceNotEnough: "您的额度不足，请充值",
     Input: (submitKey: string, action: string, append?: boolean) => {
       var inputHints = `${submitKey} ${action}`;
       if (submitKey === String(SubmitKey.Enter)) {
@@ -158,11 +158,11 @@ const cn = {
   },
   LoginPage: {
     Title: "登录",
-    SubTitle: "登录后可跟AI交流",
+    SubTitle: "登录后使用",
     Username: {
-      Title: "用户名或邮箱",
+      Title: "手机号码",
       SubTitle: "",
-      Placeholder: "请输入用户名或邮箱",
+      Placeholder: "请输入注册手机号码",
     },
     Password: {
       Title: "密码",
@@ -177,7 +177,7 @@ const cn = {
     Toast: {
       Success: "登录成功",
       Logining: "登录中……",
-      EmptyUserName: "用户名或邮箱不能为空",
+      EmptyUserName: "手机号码不能为空",
       EmptyPassword: "密码不能为空！",
     },
     GoToRegister: "前往注册",
@@ -185,7 +185,7 @@ const cn = {
   },
   RegisterPage: {
     Title: "注册",
-    SubTitle: "注册后赠送免费额度",
+    SubTitle: "注册后使用",
     Name: {
       Title: "昵称",
       SubTitle: "",
@@ -202,13 +202,13 @@ const cn = {
       Placeholder: "请输入验证码",
     },
     Phone: {
-      Title: "手机号",
+      Title: "手机号码",
       SubTitle: "",
-      Placeholder: "请输入手机号",
+      Placeholder: "请输入手机号码",
     },
     PhoneCode: {
       Title: "验证码",
-      SubTitle: "系统将向您手机号发送的短信验证码",
+      SubTitle: "系统将向您手机号码发送的短信验证码",
       Placeholder: "请输入短信验证码",
     },
     Username: {
@@ -230,7 +230,7 @@ const cn = {
       Close: "关闭",
     },
     Toast: {
-      Success: "注册成功，正在前往聊天……",
+      Success: "注册成功，正在跳转……",
       Registering: "注册中……",
       Failed: "注册失败！",
       FailedWithReason: "注册失败！原因：",
@@ -247,11 +247,11 @@ const cn = {
       SendPhoneCode: "发送短信验证码",
       PhoneCodeSending: "验证码发送中",
       PhoneCodeSent: "验证码已发送，请查看短信",
-      PhoneIsEmpty: "请输入手机号",
-      PhoneCodeSentFrequently: "验证码发送过于频繁，请稍后再试",
-      PhoneFormatError: "手机号格式不正确",
+      PhoneIsEmpty: "请输入手机号码",
+      PhoneCodeSentFrequently: "验证码发送过于频繁，请五分钟后再试",
+      PhoneFormatError: "手机号码格式不正确",
       PhoneCodeEmpty: "请输入短信验证码",
-      PhoneExistsError: "该手机号已注册",
+      PhoneExistsError: "该手机号码已注册",
     },
     GoToLogin: "前往登录",
     Captcha: "",
@@ -270,7 +270,7 @@ const cn = {
     Toast: {
       PasswordResetting: "重置密码中",
       PasswordResetFailed: "重置密码失败！",
-      PasswordResetSuccess: "重置成功，正在前往聊天……",
+      PasswordResetSuccess: "重置成功，正在跳转……",
       PasswordResetFailedWithReason: "重置失败！原因：",
     },
     Actions: {
@@ -284,9 +284,9 @@ const cn = {
     Email: "邮箱",
     Phone: "手机号",
     InviteCode: {
-      Title: "邀请码(选填)",
-      TitleRequired: "邀请码(必填)",
-      Placeholder: "输入邀请码获得额外权益",
+      Title: "内部编码(选填)",
+      TitleRequired: "内部编码(必填)",
+      Placeholder: "输入内部编码验证注册许可",
     },
     Tokens: {
       Title: "tokens",
@@ -294,11 +294,11 @@ const cn = {
     },
     ChatCount: {
       Title: "对话次数",
-      SubTitle: "询问次数（GPT3.5等）",
+      SubTitle: "询问次数（普通模型）",
     },
     AdvanceChatCount: {
-      Title: "对话次数（GPT4）",
-      SubTitle: "询问次数（GPT4）",
+      Title: "对话次数（高级模型）",
+      SubTitle: "询问次数（高级模型）",
     },
     DrawCount: {
       Title: "绘图次数",
@@ -311,8 +311,8 @@ const cn = {
       GoToBalanceList: "更多",
       ConsultAdministrator: "请咨询站长",
       All: "所有套餐",
-      CreateInviteCode: "生成邀请码",
-      Copy: "复制链接",
+      CreateInviteCode: "生成内部邀请编码",
+      Copy: "复制邀请链接",
       Redeem: "兑换码",
     },
     BalanceItem: {
@@ -343,7 +343,7 @@ const cn = {
   },
   PricingPage: {
     Title: "充值",
-    SubTitle: "畅享与AI聊天的乐趣",
+    SubTitle: "私人助手，随时可用",
     Actions: {
       Close: "关闭",
       Buy: " 购 买 ",
@@ -550,7 +550,7 @@ const cn = {
     Name: "提示词",
   },
   Mask: {
-    Name: "应用",
+    Name: "应用中心",
     Page: {
       Title: "高级应用中心",
       SubTitle: (count: number) => `${count} 个高级应用`,

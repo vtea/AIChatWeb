@@ -82,12 +82,12 @@ export function Balance() {
       (pkg.chatCount
         ? `<li>${prefix} <span style="font-size: 18px;">${
             pkg.chatCount === -1 ? "无限" : pkg.chatCount
-          }</span> 次基础聊天（GPT3.5）</li>`
+          }</span> 次基础对话（普通模型）</li>`
         : "") +
       (pkg.advancedChatCount
         ? `<li>${prefix} <span style="font-size: 18px;">${
             pkg.advancedChatCount === -1 ? "无限" : pkg.advancedChatCount
-          }</span> 次高级聊天（GPT4）</li>`
+          }</span> 次高级对话（高级模型）</li>`
         : "") +
       (pkg.drawCount
         ? `<li>${prefix} <span style="font-size: 18px;">${

@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\app",
+    "\\app\\components"
   ],
-  "SelectedNode": "\\package.json",
+  "SelectedNode": "\\app\\components\\profile.tsx",
   "PreviewInSolutionExplorer": false
 }
