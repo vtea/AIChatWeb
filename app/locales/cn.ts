@@ -14,7 +14,7 @@ const cn = {
     Later: "稍后再说",
   },
   Sidebar: {
-    Title: "公告",
+    Title: "",
     Close: "关闭",
   },
   ChatItem: {
@@ -185,7 +185,7 @@ const cn = {
   },
   RegisterPage: {
     Title: "注册",
-    SubTitle: "注册后赠送免费额度哦",
+    SubTitle: "注册后赠送免费额度",
     Name: {
       Title: "昵称",
       SubTitle: "",
@@ -293,11 +293,11 @@ const cn = {
       SubTitle: "tokens数量",
     },
     ChatCount: {
-      Title: "询问次数",
+      Title: "对话次数",
       SubTitle: "询问次数（GPT3.5等）",
     },
     AdvanceChatCount: {
-      Title: "询问次数（GPT4）",
+      Title: "对话次数（GPT4）",
       SubTitle: "询问次数（GPT4）",
     },
     DrawCount: {
