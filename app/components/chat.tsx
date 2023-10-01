@@ -77,7 +77,14 @@ import Locale from "../locales";
 import { IconButton } from "./button";
 import styles from "./chat.module.scss";
 
-import { ListItem, Modal, showConfirm, showPrompt, showToast } from "./ui-lib";
+import {
+  ListItem,
+  Modal,
+  Selector,
+  showConfirm,
+  showPrompt,
+  showToast,
+} from "./ui-lib";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LAST_INPUT_KEY, Path, REQUEST_TIMEOUT_MS } from "../constant";
 import { Avatar } from "./emoji";
@@ -466,19 +473,11 @@ export function ChatActions(props: {
   const currentModel = chatStore.currentSession().mask.modelConfig.model;
   const currentContentType =
     chatStore.currentSession().mask.modelConfig.contentType;
-  function nextModel() {
-    const models = availableModels;
-    const modelIndex = models.findIndex(
-      (m) => m.name === currentModel && m.contentType === currentContentType,
-    );
-    const nextIndex = (modelIndex + 1) % models.length;
-    const nextModel = models[nextIndex];
-    chatStore.updateCurrentSession((session) => {
-      session.mask.modelConfig.model = nextModel.name as ModelType;
-      session.mask.modelConfig.contentType = nextModel.contentType;
-      session.mask.syncGlobalConfig = false;
-    });
-  }
+  const models = useMemo(
+    () => config.models.filter((m) => m.available).map((m) => m.name),
+    [config.models],
+  );
+  const [showModelSelector, setShowModelSelector] = useState(false);
 
   return (
     <div className={styles["chat-input-actions"]}>
@@ -556,7 +555,7 @@ export function ChatActions(props: {
       />
 
       <ChatAction
-        onClick={nextModel}
+        onClick={() => setShowModelSelector(true)}
         text={currentModel}
         icon={<RobotIcon />}
       />
@@ -929,12 +928,12 @@ export function Chat() {
   const autoFocus = !isMobileScreen || isChat; // only focus in chat page
   const showMaxIcon = !isMobileScreen && !clientConfig?.isApp;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
 
   // const toggleDropdown = () => {
   //   // setIsDropdownOpen(!isDropdownOpen);
   // };
-  
+
+  const dropdownRef = useRef(null);
   const handleOutsideClick = (event: any) => {
     console.log("event", event.target, dropdownRef.current);
     setIsDropdownOpen(!isDropdownOpen);
@@ -954,16 +953,12 @@ export function Chat() {
     }
   };
   useEffect(() => {
-    if (isDropdownOpen) {
-      document.addEventListener("click", handleOutsideClick);
-    } else {
-      document.removeEventListener("click", handleOutsideClick);
-    }
-  
+    document.addEventListener("click", handleOutsideClick);
+
     return () => {
       document.removeEventListener("click", handleOutsideClick);
     };
-  }, [isDropdownOpen]);
+  }, []);
 
   useCommand({
     fill: setUserInput,
@@ -1031,7 +1026,6 @@ export function Chat() {
                 <IconButton
                   icon={isDropdownOpen ? <CloseIcon /> : <MenuIcon />}
                   bordered
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 />
               </div>
               {isDropdownOpen && (
@@ -1040,7 +1034,7 @@ export function Chat() {
                     className={styles["window-action-button"]}
                     icon={<CartIcon />}
                     bordered
-                    text="服务订阅"
+                    text="购买套餐"
                     onClick={() => navigate(Path.Pricing)}
                   />
                   <IconButton
@@ -1186,14 +1180,9 @@ export function Chat() {
                       defaultShow={i >= messages.length - 10}
                     />
                     {!isUser &&
-                      [
-                        "VARIATION",
-                        "IMAGINE",
-                        "ZOOMOUT",
-                        "PAN",
-                        "SQUARE",
-                        "VARY",
-                      ].includes(message.attr?.action) &&
+                      ["VARIATION", "IMAGINE", "ZOOMOUT"].includes(
+                        message.attr?.action,
+                      ) &&
                       message.attr?.status === "SUCCESS" && (
                         <div
                           className={[
@@ -1201,7 +1190,7 @@ export function Chat() {
                             styles["column-flex"],
                           ].join(" ")}
                         >
-                          <div style={{ display: "flex" }}>
+                          <div>
                             {[1, 2, 3, 4].map((index) => {
                               return (
                                 <button
@@ -1217,36 +1206,24 @@ export function Chat() {
                                 </button>
                               );
                             })}
-                            {/* {message.attr?.action === 'PAN' && <button
-                              onClick={() =>
-                                doSubmit(
-                                  `SQUARE::1::${message.attr.taskId}`,
-                                )
-                              }
-                              className={`${styles["chat-message-mj-action-btn"]} clickable ${styles["chat-message-mj-emoji-btn"]}`}
-                            >
-                              <HorizontalIcon />
-                            </button>} */}
                           </div>
-                          {message.attr?.action !== "PAN" && (
-                            <div style={{ display: "flex" }}>
-                              {[1, 2, 3, 4].map((index) => {
-                                return (
-                                  <button
-                                    key={index}
-                                    onClick={() =>
-                                      doSubmit(
-                                        `VARIATION::${index}::${message.attr.taskId}`,
-                                      )
-                                    }
-                                    className={`${styles["chat-message-mj-action-btn"]} clickable`}
-                                  >
-                                    V{index}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                          <div>
+                            {[1, 2, 3, 4].map((index) => {
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() =>
+                                    doSubmit(
+                                      `VARIATION::${index}::${message.attr.taskId}`,
+                                    )
+                                  }
+                                  className={`${styles["chat-message-mj-action-btn"]} clickable`}
+                                >
+                                  V{index}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     {!isUser &&
@@ -1258,27 +1235,6 @@ export function Chat() {
                             styles["column-flex"],
                           ].join(" ")}
                         >
-                          {!message.attr?.direction && (
-                            <div>
-                              {["Strong", "Subtle"].map((strength) => {
-                                return (
-                                  <button
-                                    key={strength}
-                                    onClick={() =>
-                                      doSubmit(
-                                        `VARY::${strength.toLocaleUpperCase()}::${
-                                          message.attr.taskId
-                                        }`,
-                                      )
-                                    }
-                                    className={`${styles["chat-message-mj-action-btn"]} clickable ${styles["vary"]}`}
-                                  >
-                                    Vary ({strength})
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
                           <div>
                             {[1.5, 2].map((index) => {
                               return (
@@ -1295,60 +1251,6 @@ export function Chat() {
                                 </button>
                               );
                             })}
-                          </div>
-                          <div style={{ display: "flex" }}>
-                            {["⬅️", "➡️", "⬆️", "⬇️"]
-                              .filter((_, index) => {
-                                if (message.attr?.direction === "horizontal") {
-                                  return index <= 1;
-                                } else if (
-                                  message.attr?.direction === "vertical"
-                                ) {
-                                  return index >= 2;
-                                } else {
-                                  return true;
-                                }
-                              })
-                              .map((direction) => {
-                                // ➡️
-                                const str = {
-                                  "⬅️": "LEFT",
-                                  "➡️": "RIGHT",
-                                  "⬆️": "UP",
-                                  "⬇️": "DOWN",
-                                }[direction];
-                                return (
-                                  <button
-                                    key={str}
-                                    onClick={() =>
-                                      doSubmit(
-                                        `PAN::${str}::${message.attr.taskId}`,
-                                      )
-                                    }
-                                    className={`${styles["chat-message-mj-action-btn"]} clickable ${styles["chat-message-mj-emoji-btn"]}`}
-                                  >
-                                    {direction === "⬅️" && <PanLeftIcon />}
-                                    {direction === "➡️" && <PanRightIcon />}
-                                    {direction === "⬆️" && <PanUpIcon />}
-                                    {direction === "⬇️" && <PanDownIcon />}
-                                  </button>
-                                );
-                              })}
-                            {message.attr?.direction && (
-                              <button
-                                onClick={() =>
-                                  doSubmit(`SQUARE::1::${message.attr.taskId}`)
-                                }
-                                className={`${styles["chat-message-mj-action-btn"]} clickable ${styles["chat-message-mj-emoji-btn"]}`}
-                              >
-                                {message.attr?.direction === "vertical" && (
-                                  <HorizontalIcon />
-                                )}
-                                {message.attr?.direction === "horizontal" && (
-                                  <VerticalIcon />
-                                )}
-                              </button>
-                            )}
                           </div>
                         </div>
                       )}

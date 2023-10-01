@@ -45,11 +45,14 @@ export function ListItem(props: {
   children?: JSX.Element | JSX.Element[];
   icon?: JSX.Element;
   hideTitle?: boolean;
-  className?: string;
+  onClick?: () => void;
 }) {
   const hideTitle = props.hideTitle;
   return (
-    <div className={styles["list-item"] + ` ${props.className || ""}`}>
+    <div
+      className={styles["list-item"] + ` ${props.className || ""}`}
+      onClick={props.onClick}
+    >
       {hideTitle === undefined || !hideTitle ? (
         <div className={styles["list-header"]}>
           {props.icon && (
@@ -448,4 +451,38 @@ export function showPrompt(content: any, value = "") {
       </Modal>,
     );
   });
+}
+
+export function Selector<T>(props: {
+  items: Array<{
+    title: string;
+    subTitle?: string;
+    value: T;
+  }>;
+  onSelection?: (selection: T[]) => void;
+  onClose?: () => void;
+  multiple?: boolean;
+}) {
+  return (
+    <div className={styles["selector"]}>
+      <div className={styles["selector-content"]}>
+        <List>
+          {props.items.map((item, i) => {
+            return (
+              <ListItem
+                className={styles["selector-item"]}
+                key={i}
+                title={item.title}
+                subTitle={item.subTitle}
+                onClick={() => {
+                  props.onSelection?.([item.value]);
+                  props.onClose?.();
+                }}
+              ></ListItem>
+            );
+          })}
+        </List>
+      </div>
+    </div>
+  );
 }
