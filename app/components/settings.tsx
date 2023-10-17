@@ -45,7 +45,6 @@ import { Prompt, SearchService, usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
 import { InputRange } from "./input-range";
 import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarPicker } from "./emoji";
 import { getClientConfig } from "../config/client";
 import { useSyncStore } from "../store/sync";
 
@@ -685,7 +684,7 @@ export function Settings() {
             title={Locale.Settings.Version.Title}
             subTitle={Locale.Settings.Version.SubTitle}
           >
-            <span>v0.8</span>
+            <span>v0.9.5</span>
           </ListItem>
         </List>
 

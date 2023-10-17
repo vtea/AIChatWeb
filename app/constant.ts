@@ -13,6 +13,7 @@ export enum Path {
   Home = "/",
   Chat = "/chat",
   Login = "/login",
+  WechatCallback = "/wechatCallback",
   Register = "/register",
   ForgetPassword = "/forget-password",
   Settings = "/settings",
@@ -21,7 +22,11 @@ export enum Path {
   Auth = "/auth",
   Profile = "/profile",
   Pricing = "/pricing",
+  RedeemCode = "/redeemCode",
+  Pay = "/pay",
   Balance = "/balance",
+  Invitation = "/invitation",
+  Order = "/order",
 }
 
 export enum SlotID {
@@ -46,6 +51,7 @@ export enum StoreKey {
   Profile = "profile",
   WebsiteConfig = "websiteCofnig",
   NoticeConfig = "noticeConfig",
+  WechatConfig = "wechatConfig",
 }
 
 export const MAX_SIDEBAR_WIDTH = 500;

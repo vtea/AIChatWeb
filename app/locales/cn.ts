@@ -25,7 +25,7 @@ const cn = {
     Actions: {
       ChatList: "查看消息列表",
       CompressedHistory: "查看压缩后的历史 Prompt",
-      Export: "导出聊天记录",
+      Export: "分享本页",
       Copy: "复制",
       Stop: "停止",
       Retry: "重试",
@@ -37,7 +37,7 @@ const cn = {
     },
     Commands: {
       new: "新建聊天",
-      newm: "从面具新建聊天",
+      newm: "选择应用新建聊天",
       next: "下一个聊天",
       prev: "上一个聊天",
       clear: "清除上下文",
@@ -52,7 +52,7 @@ const cn = {
         dark: "深色模式",
       },
       Prompt: "快捷指令",
-      Masks: "所有面具",
+      Masks: "所有应用",
       Clear: "清除聊天",
       Settings: "对话设置",
       Internet: "联网模式",
@@ -74,21 +74,24 @@ const cn = {
     Draw: "绘画",
     Config: {
       Reset: "清除记忆",
-      SaveAs: "存为面具",
+      SaveAs: "存为应用",
     },
   },
   Midjourney: {
+    Uploading: "上传中……",
     SelectImgMax: (max: number) => `最多可选择 ${max} 张图片`,
     InputDisabled: "该模式下不支持输入内容",
+    NotSupports: "暂不支持此操作",
     HasImgTip:
       "提示：垫图模式/识图(describe)模式只会使用第一张图片，混图(blend)模式会按顺序使用选中的5张图片（点击图片可以移除）",
     ModeImagineUseImg: "垫图（图生图）模式",
     ModeBlend: "混图模式",
     ModeDescribe: "识图（图生文）模式",
-    NeedInputUseImgPrompt:
-      "垫图模式下需要输入内容才能使用图片，请以“/mj”开头输入内容",
+    NeedInputUseImgPrompt: "垫图模式下需要输入内容才能使用图片，请输入内容",
+    ImagineMaxImg: (max: number) => `垫图（图生图）模式下至多 ${max} 张图片`,
     BlendMinImg: (min: number, max: number) =>
       `混图模式下至少需要 ${min} 张图片，至多 ${max} 张图片`,
+    DescribeMaxImg: (max: number) => `识图（图生文）模式下至多 ${max} 张图片`,
     TaskErrUnknownType: "任务提交失败：未知的任务类型",
     TaskErrNotSupportType: (type: string) =>
       `任务提交失败：不支持的任务类型 -> ${type}`,
@@ -106,7 +109,7 @@ const cn = {
     TaskStatus: "任务状态",
     TaskRemoteSubmit: "任务已提交至绘图服务器",
     TaskProgressTip: (progress: number | undefined) =>
-      `任务正在运行${progress ? `，当前进度：${progress}%` : ""}`,
+      `任务正在运行${progress ? `，当前进度：${progress}` : ""}`,
     TaskNotStart: "任务尚未开始",
     Url: "地址",
     SettingProxyCoverTip:
@@ -127,8 +130,8 @@ const cn = {
       SubTitle: "可以导出 Markdown 文本或者 PNG 图片",
     },
     IncludeContext: {
-      Title: "包含面具上下文",
-      SubTitle: "是否在消息中展示面具上下文",
+      Title: "包含应用上下文",
+      SubTitle: "是否在消息中展示应用上下文",
     },
     Steps: {
       Select: "选取",
@@ -201,6 +204,16 @@ const cn = {
       SubTitle: "系统将向您邮箱发送的验证码",
       Placeholder: "请输入验证码",
     },
+    Phone: {
+      Title: "手机号",
+      SubTitle: "",
+      Placeholder: "请输入手机号",
+    },
+    PhoneCode: {
+      Title: "验证码",
+      SubTitle: "系统将向您手机号发送的短信验证码",
+      Placeholder: "请输入短信验证码",
+    },
     Username: {
       Title: "用户名",
       SubTitle: "用户名只能包含字母、数字、下划线，不可以包含中文",
@@ -234,6 +247,14 @@ const cn = {
       EmailFormatError: "邮箱格式不正确",
       EmailCodeEmpty: "请输入邮箱验证码",
       EmailExistsError: "该邮箱已注册",
+      SendPhoneCode: "发送短信验证码",
+      PhoneCodeSending: "验证码发送中",
+      PhoneCodeSent: "验证码已发送，请查看短信",
+      PhoneIsEmpty: "请输入手机号",
+      PhoneCodeSentFrequently: "验证码发送过于频繁，请稍后再试",
+      PhoneFormatError: "手机号格式不正确",
+      PhoneCodeEmpty: "请输入短信验证码",
+      PhoneExistsError: "该手机号已注册",
     },
     GoToLogin: "前往登录",
     Captcha: "",
@@ -264,28 +285,37 @@ const cn = {
     SubTitle: "个人中心",
     Username: "账号",
     Email: "邮箱",
+    Phone: "手机号",
+    Invitor: {
+      Title: "邀请人",
+    },
+    InviteCode: {
+      Title: "邀请码(选填)",
+      TitleRequired: "邀请码(必填)",
+      Placeholder: "输入邀请码获得额外权益",
+    },
     Tokens: {
       Title: "tokens",
-      SubTitle: "剩余tokens数量",
+      SubTitle: "",
     },
     ChatCount: {
-      Title: "询问次数",
-      SubTitle: "剩余询问次数（GPT3.5等）",
+      Title: "基础聊天积分",
+      SubTitle: "",
     },
     AdvanceChatCount: {
-      Title: "询问次数（GPT4）",
-      SubTitle: "聊天询问次数（GPT4）",
+      Title: "高级聊天积分",
+      SubTitle: "",
     },
     DrawCount: {
-      Title: "绘图次数",
-      SubTitle: "剩余绘图次数",
+      Title: "绘图积分",
+      SubTitle: "",
     },
     Actions: {
       Close: "关闭",
       Pricing: "购买套餐",
+      Order: "订单中心",
       GoToBalanceList: "更多",
       ConsultAdministrator: "请咨询站长",
-      All: "所有套餐",
     },
     BalanceItem: {
       Title: "套餐类型",
@@ -302,17 +332,85 @@ const cn = {
       SubTitle: "",
     },
   },
+  RedeemCodePage: {
+    Title: "兑换码",
+    RedeemCodeInput: {
+      Title: "兑换码",
+      Placeholder: "请输入兑换码",
+    },
+    Actions: {
+      Close: "关闭",
+      Redeem: "开始兑换",
+    },
+  },
   PricingPage: {
     Title: "充值",
     SubTitle: "畅享与AI聊天的乐趣",
     Actions: {
       Close: "关闭",
       Buy: " 购 买 ",
+      Order: "订单中心",
+      RedeemCode: "兑换码",
     },
     NoPackage: "暂无可用套餐",
     Loading: "请稍候……",
     PleaseLogin: "请先登录",
     ConsultAdministrator: "请咨询站长",
+    BuyFailedCause: "套餐购买失败！原因：",
+    TOO_FREQUENCILY: "操作过于频繁，请稍后再试",
+    CREATE_ORDER_FAILED: "创建订单失败",
+  },
+  PayPage: {
+    PaidSuccess: "支付成功",
+    Actions: {
+      Close: "关闭",
+    },
+  },
+  BalancePage: {
+    Title: "已购套餐",
+    NoBalance: "您尚未购买任何套餐",
+    Loading: "请稍候……",
+    Actions: {
+      Close: "关闭",
+      Pricing: "购买套餐",
+      Order: "订单中心",
+      Profile: "个人中心",
+      Refresh: "刷新",
+      Refreshing: "刷新中……",
+      RedeemCode: "兑换码",
+    },
+  },
+  InvitationPage: {
+    Title: "邀请记录",
+    NoInvitation: "快将邀请链接分享给朋友吧",
+    Loading: "请稍候……",
+    Actions: {
+      Close: "关闭",
+      Profile: "个人中心",
+      Refresh: "刷新",
+      Refreshing: "刷新中……",
+    },
+  },
+  OrderPage: {
+    Title: "订单中心",
+    NoOrder: "暂无订单",
+    Loading: "请稍候……",
+    StateError: "状态错误！",
+    CancelFailedForStateError: "当前状态下无法取消",
+    CancelSuccess: "订单取消成功",
+    CancelFailure: "订单取消失败",
+    TryAgainLaster: "操作失败，请稍候重试",
+    PleaseWaitForDataSync:
+      "数据可能延迟，支付成功请在10分钟后查看订单状态，请勿重复支付",
+    Actions: {
+      Pay: "支付",
+      Cancel: "取消",
+      Pricing: "购买套餐",
+      Profile: "个人中心",
+      Copy: "复制",
+      Refresh: "刷新",
+      Refreshing: "刷新中……",
+    },
   },
   BalancePage: {
     Title: "已购套餐",
@@ -377,8 +475,8 @@ const cn = {
       SubTitle: "在预览气泡中预览 Markdown 内容",
     },
     Mask: {
-      Title: "面具启动页",
-      SubTitle: "新建聊天时，展示面具启动页",
+      Title: "应用启动页",
+      SubTitle: "新建聊天时，展示应用启动页",
     },
     Prompt: {
       Disable: {
@@ -475,15 +573,21 @@ const cn = {
     Clear: "上下文已清除",
     Revert: "恢复上下文",
   },
+  Shop: {
+    Name: "服务订阅",
+  },
+  User: {
+    Name: "个人中心",
+  },
   Plugin: {
-    Name: "插件",
+    Name: "插件管理",
   },
   Mask: {
-    Name: "面具",
+    Name: "高级应用",
     Page: {
-      Title: "预设角色面具",
-      SubTitle: (count: number) => `${count} 个预设角色定义`,
-      Search: "搜索角色面具",
+      Title: "应用中心",
+      SubTitle: (count: number) => `${count} 个应用定义`,
+      Search: "搜索应用",
       Create: "新建",
     },
     Item: {
@@ -496,7 +600,7 @@ const cn = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `编辑预设面具 ${readonly ? "（只读）" : ""}`,
+        `编辑预设应用 ${readonly ? "（只读）" : ""}`,
       Download: "下载预设",
       Clone: "克隆预设",
     },
@@ -519,8 +623,8 @@ const cn = {
     Skip: "直接开始",
     NotShow: "不再展示",
     ConfirmNoShow: "确认禁用？禁用后可以随时在设置中重新启用。",
-    Title: "挑选一个面具",
-    SubTitle: "现在开始，与面具背后的灵魂思维碰撞",
+    Title: "选择一个应用",
+    SubTitle: "现在开始，使用人工智能的高级方法",
     More: "查看全部",
   },
 

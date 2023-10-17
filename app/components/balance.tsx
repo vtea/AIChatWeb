@@ -245,6 +245,26 @@ export function Balance() {
               }}
             />
           </ListItem>
+          <ListItem>
+            <IconButton
+              text={Locale.BalancePage.Actions.Order}
+              block={true}
+              type="second"
+              onClick={() => {
+                navigate(Path.Order);
+              }}
+            />
+          </ListItem>
+          <ListItem>
+            <IconButton
+              text={Locale.BalancePage.Actions.RedeemCode}
+              block={true}
+              type="second"
+              onClick={() => {
+                navigate(Path.RedeemCode);
+              }}
+            />
+          </ListItem>
         </List>
       </div>
     </ErrorBoundary>

@@ -10,15 +10,20 @@ import {
   useChatStore,
 } from "@/app/store";
 
-import { ChatOptions, getHeaders, LLMApi, LLMUsage } from "../api";
+import {
+  ChatOptions,
+  ChatSubmitResult,
+  getHeaders,
+  LLMApi,
+  LLMUsage,
+} from "../api";
 import Locale from "../../locales";
 import {
   EventStreamContentType,
   fetchEventSource,
 } from "@fortaine/fetch-event-source";
-import { prettyObject } from "@/app/utils/format";
-
-const ChatFetchTaskPool: Record<string, any> = {};
+import { toYYYYMMDD_HHMMSS } from "@/app/utils";
+// import { prettyObject } from "@/app/utils/format";
 
 export class ChatGPTApi implements LLMApi {
   path(path: string): string {
@@ -54,10 +59,16 @@ export class ChatGPTApi implements LLMApi {
     };
     if (
       modelConfig.contentType === "Image" ||
-      /^(UPSCALE|VARIATION)::\d::/.test(options.content)
+      /^(UPSCALE|VARIATION|ZOOMOUT|PAN|SQUARE|BLEND|DESCRIBE|IMAGINE)::([\d\w]+)::/.test(
+        options.content,
+      )
     ) {
-      this.handleDraw(options, modelConfig);
-      return;
+      const result = await this.handleDraw(options, modelConfig);
+      return {
+        userMessage: options.userMessage,
+        botMessage: options.botMessage,
+        fetch: result,
+      };
     }
 
     const requestPayload = {
@@ -265,15 +276,18 @@ export class ChatGPTApi implements LLMApi {
       total: total.hard_limit_usd,
     } as LLMUsage;
   }
-  async handleDraw(options: ChatOptions, modelConfig: any) {
-    options.onUpdate?.("正在绘制……", "");
+  async handleDraw(options: ChatOptions, modelConfig: any): Promise<boolean> {
+    options.onUpdate?.("请稍候……", "");
+    const userMessage = options.userMessage;
     const botMessage = options.botMessage;
     const content = options.content;
-    const startFn = async () => {
+    const startFn = async (): Promise<boolean> => {
       const prompt = content; // .substring(3).trim();
       let action: string = "IMAGINE";
       const firstSplitIndex = prompt.indexOf("::");
-      if (firstSplitIndex > 0) {
+      if (options.imageMode) {
+        action = options.imageMode; // IMAGINE | BLEND | DESCRIBE
+      } else if (firstSplitIndex > 0) {
         action = prompt.substring(0, firstSplitIndex);
       }
       if (
@@ -284,14 +298,15 @@ export class ChatGPTApi implements LLMApi {
           "DESCRIBE",
           "BLEND",
           "REROLL",
-          "ZOOMOUT",
         ].includes(action)
       ) {
         options.onFinish(Locale.Midjourney.TaskErrUnknownType);
-        return;
+        return false;
       }
       botMessage.attr.action = action;
       let actionIndex: any = null;
+      let actionDirection: string | null = null;
+      let actionStrength: string | null = null;
       let actionUseTaskId: any = null;
       let zoomRatio: any = null;
       if (action === "VARIATION" || action == "UPSCALE" || action == "REROLL") {
@@ -299,16 +314,12 @@ export class ChatGPTApi implements LLMApi {
           prompt.substring(firstSplitIndex + 2, firstSplitIndex + 3),
         );
         actionUseTaskId = prompt.substring(firstSplitIndex + 5);
-      } else if (action === "ZOOMOUT") {
-        const temp = prompt.substring(firstSplitIndex + 2);
-        const index = temp.indexOf("::");
-        zoomRatio = temp.substring(0, index);
-        actionUseTaskId = temp.substring(index + 2);
       }
       try {
         let res = null;
         const reqFn = (path: string, method: string, body?: any) => {
-          return fetch("/api/" + path, {
+          const url = this.path(path);
+          return fetch(url, {
             method: method,
             headers: getHeaders(),
             body: JSON.stringify({
@@ -321,29 +332,24 @@ export class ChatGPTApi implements LLMApi {
           case "IMAGINE": {
             res = await reqFn("draw/imagine", "POST", {
               prompt: prompt,
-              // base64: extAttr?.useImages?.[0]?.base64 ?? null,
+              fileUuid: options.baseImages?.[0]?.uuid ?? null,
             });
             break;
           }
-          // case "DESCRIBE": {
-          //     res = await reqFn(
-          //         "submit/describe",
-          //         "POST",
-          //         JSON.stringify({
-          //             base64: extAttr.useImages[0].base64,
-          //         }),
-          //     );
-          //     break;
-          // }
-          // case "BLEND": {
-          //     const base64Array = extAttr.useImages.map((ui: any) => ui.base64)
-          //     res = await reqFn(
-          //         "submit/blend",
-          //         "POST",
-          //         JSON.stringify({base64Array}),
-          //     );
-          //     break;
-          // }
+          case "DESCRIBE": {
+            res = await reqFn("draw/describe", "POST", {
+              fileUuid: options.baseImages[0].uuid,
+            });
+            break;
+          }
+          case "BLEND": {
+            const fileUuidArray = options.baseImages.map((ui: any) => ui.uuid);
+            res = await reqFn("draw/blend", "POST", {
+              fileUuidArray,
+            });
+            botMessage.attr.prompt = prompt;
+            break;
+          }
           case "UPSCALE": {
             res = await reqFn("draw/upscale", "POST", {
               targetIndex: actionIndex,
@@ -369,20 +375,11 @@ export class ChatGPTApi implements LLMApi {
             });
             break;
           }
-          case "ZOOMOUT": {
-            res = await reqFn("draw/zoomOut", "POST", {
-              zoomRatio: zoomRatio,
-              targetUuid: actionUseTaskId,
-            });
-            botMessage.attr.zoomRatio = zoomRatio;
-            botMessage.attr.targetUuid = actionUseTaskId;
-            break;
-          }
           default:
         }
         if (res == null) {
           options.onFinish(Locale.Midjourney.TaskErrNotSupportType(action));
-          return;
+          return false;
         }
         if (!res.ok) {
           console.error(res);
@@ -402,12 +399,16 @@ export class ChatGPTApi implements LLMApi {
           //   resJson?.description ||
           //   Locale.Midjourney.UnknownError,
           // ), '');
-          options.onFinish(JSON.stringify(resJson));
           botMessage.attr.code = resJson.code;
+          options.onFinish(JSON.stringify(resJson));
+          return false;
         } else {
           const data = resJson.data;
           const taskId: string = data.uuid;
           const prefixContent = Locale.Midjourney.TaskPrefix(prompt, taskId);
+          botMessage.attr.taskId = taskId;
+          botMessage.attr.status = "NOT_START";
+          botMessage.attr.submitTime = toYYYYMMDD_HHMMSS(new Date());
           options.onUpdate?.(
             prefixContent +
               `[${new Date().toLocaleString()}] - ${
@@ -416,9 +417,8 @@ export class ChatGPTApi implements LLMApi {
               Locale.Midjourney.PleaseWait,
             "",
           );
-          botMessage.attr.taskId = taskId;
-          botMessage.attr.status = "NOT_START";
-          this.fetchMidjourneyStatus(options, botMessage);
+          return true;
+          // this.fetchDrawStatus(options.onUpdate, options.onFinish, botMessage);
         }
       } catch (e: any) {
         console.error(e);
@@ -426,6 +426,7 @@ export class ChatGPTApi implements LLMApi {
         // botMessage.content = Locale.Midjourney.TaskSubmitErr(
         //     e?.error || e?.message || Locale.Midjourney.UnknownError,
         // );
+        return false;
       } finally {
         // ChatControllerPool.remove(
         //     sessionIndex,
@@ -434,15 +435,15 @@ export class ChatGPTApi implements LLMApi {
         // botMessage.streaming = false;
       }
     };
-    await startFn();
+    return await startFn();
   }
-  fetchMidjourneyStatus(options: ChatOptions, botMessage: ChatMessage) {
+  async fetchDrawStatus(
+    onUpdate: ((message: string, chunk: string) => void) | undefined,
+    onFinish: (message: string) => void,
+    botMessage: ChatMessage,
+  ) {
     const taskId = botMessage?.attr?.taskId;
-    if (
-      !taskId ||
-      ["SUCCESS", "FAILURE"].includes(botMessage?.attr?.status) ||
-      ChatFetchTaskPool[taskId]
-    )
+    if (!taskId || ["SUCCESS", "FAILURE"].includes(botMessage?.attr?.status)) {
       return;
     ChatFetchTaskPool[taskId] = setTimeout(async () => {
       ChatFetchTaskPool[taskId] = null;
@@ -480,12 +481,6 @@ export class ChatGPTApi implements LLMApi {
                 "::" +
                 botMessage.attr.targetUuid +
                 ")"
-              : statusResJson.data.type === "zoomOut"
-              ? "(ZOOMOUT::" +
-                botMessage.attr.zoomRatio +
-                "::" +
-                botMessage.attr.targetUuid +
-                ")"
               : ""),
           taskId,
         );
@@ -498,6 +493,7 @@ export class ChatGPTApi implements LLMApi {
             const entireContent =
               prefixContent + `[![${taskId}](${imgUrl})](${imgUrl})`;
             isFinished = true;
+            options.onFinish(entireContent);
 
             botMessage.attr.imgUrl = imgUrl;
             // if (statusResJson.action === "DESCRIBE" && statusResJson.prompt) {
@@ -505,21 +501,20 @@ export class ChatGPTApi implements LLMApi {
             // }
             botMessage.attr.status = "SUCCESS";
             botMessage.attr.finished = true;
-            options.onFinish(entireContent);
             break;
           }
           case 40:
             content =
               statusResJson.data.error || Locale.Midjourney.UnknownReason;
             isFinished = true;
-            botMessage.attr.status = "FAILURE";
-            botMessage.attr.finished = true;
             options.onFinish(
               prefixContent +
                 `**${
                   Locale.Midjourney.TaskStatus
                 }:** [${new Date().toLocaleString()}] - ${content}`,
             );
+            botMessage.attr.status = "FAILURE";
+            botMessage.attr.finished = true;
             break;
           case 0:
             content = Locale.Midjourney.TaskNotStart;

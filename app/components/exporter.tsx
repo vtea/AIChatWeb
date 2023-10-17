@@ -424,6 +424,8 @@ export function ImagePreviewer(props: {
       .catch((e) => console.log("[Export Image] ", e));
   };
 
+  const { logoUrl } = useWebsiteConfigStore();
+
   return (
     <div className={styles["image-previewer"]}>
       <PreviewActions
@@ -439,7 +441,7 @@ export function ImagePreviewer(props: {
         <div className={styles["chat-info"]}>
           <div className={styles["logo"] + " no-dark"}>
             <NextImage
-              src={ChatBotIcon.src}
+              src={ChatGptIcon.src}
               alt="logo"
               width={44}
               height={44}
@@ -450,9 +452,14 @@ export function ImagePreviewer(props: {
             <div className={styles["main-title"]}>
               {websiteConfigStore.title || "AI Chat"}
             </div>
-            <div className={styles["sub-title"]}>
-              {websiteConfigStore.subTitle || "github.com/Nanjiren01/AIChatWeb"}
-            </div>
+            <div
+              className={styles["sub-title"]}
+              dangerouslySetInnerHTML={{
+                __html:
+                  websiteConfigStore.subTitle ||
+                  "github.com/Nanjiren01/AIChatWeb",
+              }}
+            ></div>
             <div className={styles["icons"]}>
               <ExportAvatar avatar={config.avatar} />
               <span className={styles["icon-space"]}>&</span>
