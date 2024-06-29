@@ -9,7 +9,7 @@
   },
   "package": {
     "productName": "AIChatWeb App",
-    "version": "0.11.0"
+    "version": "0.11.4"
   },
   "tauri": {
     "allowlist": {
@@ -21,7 +21,7 @@
       "http": {
         "all": true,
         "request": true,
-        "scope":["http://**", "https://**"]
+        "scope":["http://159.138.28.103:8082","https://159.138.28.103:8082"]
       },
       "dialog": {
         "all": true,
@@ -91,7 +91,8 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": null,
+      "dangerousUseHttpScheme": true
     },
     "updater": {
       "active": true,

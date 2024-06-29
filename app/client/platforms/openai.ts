@@ -559,8 +559,6 @@ export class ChatGPTApi implements LLMApi {
             });
             break;
           }
-<<<<<<< HEAD
-=======
           case "ZOOMOUT": {
             res = await reqFn("draw/zoomOut", "POST", {
               zoomRatio: zoomRatio,
@@ -595,7 +593,6 @@ export class ChatGPTApi implements LLMApi {
             botMessage.attr.targetUuid = actionUseTaskId!;
             break;
           }
->>>>>>> origin/pro-v0.11.4
           default:
         }
         if (res == null) {
@@ -658,122 +655,6 @@ export class ChatGPTApi implements LLMApi {
   ) {
     const taskId = botMessage?.attr?.taskId;
     if (!taskId || ["SUCCESS", "FAILURE"].includes(botMessage?.attr?.status)) {
-<<<<<<< HEAD
-      return;
-    ChatFetchTaskPool[taskId] = setTimeout(async () => {
-      ChatFetchTaskPool[taskId] = null;
-      const statusRes = await fetch(`/api/draw/info?uuid=${taskId}`, {
-        method: "GET",
-        headers: getHeaders(),
-      });
-      const statusResJson = await statusRes.json();
-      console.log("statusResJson", statusResJson);
-      if (statusRes.status < 200 || statusRes.status >= 300) {
-        options.onFinish(
-          Locale.Midjourney.TaskStatusFetchFail +
-            ": " +
-            (statusResJson?.message ||
-              statusResJson?.error ||
-              statusResJson?.description) || Locale.Midjourney.UnknownReason,
-        );
-      } else {
-        let isFinished = false;
-        let content;
-        if (!botMessage.attr.prompt || botMessage.attr.prompt === "") {
-          botMessage.attr.prompt = statusResJson.data.prompt;
-        }
-        const prefixContent = Locale.Midjourney.TaskPrefix(
-          botMessage.attr.prompt +
-            (statusResJson.data.type === "upscale"
-              ? "(UPSCALE::" +
-                botMessage.attr.targetIndex +
-                "::" +
-                botMessage.attr.targetUuid +
-                ")"
-              : statusResJson.data.type === "variation"
-              ? "(VARIATION::" +
-                botMessage.attr.targetIndex +
-                "::" +
-                botMessage.attr.targetUuid +
-                ")"
-              : ""),
-          taskId,
-        );
-        const state = statusResJson?.data?.state;
-        switch (state) {
-          case 30: {
-            const result = JSON.parse(statusResJson.data.result);
-            const imgUrl = result.url;
-
-            const entireContent =
-              prefixContent + `[![${taskId}](${imgUrl})](${imgUrl})`;
-            isFinished = true;
-            options.onFinish(entireContent);
-
-            botMessage.attr.imgUrl = imgUrl;
-            // if (statusResJson.action === "DESCRIBE" && statusResJson.prompt) {
-            //     botMessage.content += `\n${statusResJson.prompt}`;
-            // }
-            botMessage.attr.status = "SUCCESS";
-            botMessage.attr.finished = true;
-            break;
-          }
-          case 40:
-            content =
-              statusResJson.data.error || Locale.Midjourney.UnknownReason;
-            isFinished = true;
-            options.onFinish(
-              prefixContent +
-                `**${
-                  Locale.Midjourney.TaskStatus
-                }:** [${new Date().toLocaleString()}] - ${content}`,
-            );
-            botMessage.attr.status = "FAILURE";
-            botMessage.attr.finished = true;
-            break;
-          case 0:
-            content = Locale.Midjourney.TaskNotStart;
-            botMessage.attr.status = "NOT_START";
-            break;
-          case 20:
-            content = Locale.Midjourney.TaskProgressTip(
-              statusResJson.data.progress,
-            );
-            botMessage.attr.status = "IN_PROGRESS";
-            break;
-          case 10:
-            content = Locale.Midjourney.TaskRemoteSubmit;
-            botMessage.attr.status = "SUBMITTED";
-            break;
-          default:
-            content = statusResJson.status;
-        }
-        console.log("isFinished", isFinished);
-        if (!isFinished) {
-          let entireContent =
-            prefixContent +
-            `**${
-              Locale.Midjourney.TaskStatus
-            }:** [${new Date().toLocaleString()}] - ${content}`;
-          if (statusResJson.data.state === 20 && statusResJson.data.result) {
-            const result = JSON.parse(statusResJson.data.result);
-            let imgUrl = result.url;
-            // useGetMidjourneySelfProxyUrl(
-            //     statusResJson.imageUrl,
-            // );
-            botMessage.attr.imgUrl = imgUrl;
-            entireContent += `\n[![${taskId}](${imgUrl})](${imgUrl})`;
-          }
-          options.onUpdate?.(entireContent, "");
-          this.fetchMidjourneyStatus(options, botMessage);
-        }
-        // set(() => ({}));
-        // if (isFinished) {
-        //     extAttr?.setAutoScroll(true);
-        // }
-      }
-    }, 3000);
-=======
       return false;
     }
 
@@ -904,7 +785,6 @@ export class ChatGPTApi implements LLMApi {
       onUpdate(entireContent, "");
       return true;
     }
->>>>>>> origin/pro-v0.11.4
   }
 }
 export { OpenaiPath };

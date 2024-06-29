@@ -3,21 +3,15 @@
 require("../polyfill");
 
 import { useState, useEffect, useCallback } from "react";
-
 import styles from "./home.module.scss";
-
 import ChatBotIcon from "../icons/ai-chat-bot.png";
 import LoadingIcon from "../icons/three-dots.svg";
 import NextImage from "next/image";
-
 import { getCSSVar, useMobileScreen } from "../utils";
-
 import dynamic from "next/dynamic";
 import { Path, SlotID } from "../constant";
 import { ErrorBoundary } from "./error";
-
 import { getISOLang, getLang } from "../locales";
-
 import {
   BrowserRouter as Router,
   Routes,
@@ -77,6 +71,7 @@ const WechatCallback = dynamic(
 const Register = dynamic(async () => (await import("./register")).Register, {
   loading: () => <Loading noLogo logoLoading />,
 });
+
 const ForgetPassword = dynamic(
   async () => (await import("./forget-password")).ForgetPassword,
   {
@@ -127,10 +122,6 @@ const Invitation = dynamic(
 
 const Order = dynamic(async () => (await import("./order")).Order, {
   loading: () => <Loading noLogo logoLoading />,
-});
-
-const Balance = dynamic(async () => (await import("./balance")).Balance, {
-  loading: () => <Loading noLogo />,
 });
 
 const Chat = dynamic(async () => (await import("./chat")).Chat, {
