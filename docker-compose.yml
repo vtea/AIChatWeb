@@ -13,7 +13,7 @@ services:
     environment:
       DB_URL: jdbc:mysql://aichat-db:3306/aichat?useSSL=false
       DB_USERNAME: root
-      DB_PASSWORD: 123456
+      DB_PASSWORD: n0Ght7cDun4AItGaichat
       REDIS_HOST: aichat-redis
       REDIS_PORT: 6379
       SUPERADMIN_USERNAME: aichat
@@ -27,6 +27,20 @@ services:
       MAIL_PORT: 25
       MAIL_USERNAME: your-email-username
       MAIL_PASSWORD: your-email-password
+<<<<<<< HEAD
+=======
+      TZ: Asia/Shanghai
+      LICENSE_SUBJECT: qq@qq.com
+      LICENSE_SK: your-sk-please-get-from-http://console.nanjiren.online
+      UTIL_ENDPOINT: http://aichat-util:7788
+      STORE_TYPE:
+      OSS_ENDPOINT:
+      OSS_BUCKET_NAME:
+      OSS_ACCESS_KEY_ID:
+      OSS_ACCESS_KEY_SECRET:
+      WEB_SECRET: aichatwebsecret
+      LOG_LEVEL: INFO
+>>>>>>> origin/pro-v0.11.4
     ports:
       - "8082:8080"
 
@@ -41,6 +55,7 @@ services:
     environment:
       BASE_URL: http://aichat-admin:8080
       TZ: Asia/Shanghai
+      SECRET: aichatwebsecret
 
   console:
     image: nanjiren01/aichat-console:pro-latest
@@ -58,7 +73,7 @@ services:
     container_name: aichat-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: n0Ght7cDun4AItGaichat
       TZ: Asia/Shanghai
     # ports:
     #   - "3310:3306"

@@ -1,10 +1,17 @@
 import {
+  ApiPath,
   DEFAULT_API_HOST,
+  DEFAULT_MODELS,
   OpenaiPath,
   REQUEST_TIMEOUT_MS,
+  ServiceProvider,
 } from "@/app/constant";
 import {
+  AttrDirection,
   ChatMessage,
+  MessageAction,
+  PanDirection,
+  TargetIndex,
   useAccessStore,
   useAppConfig,
   useChatStore,
@@ -15,6 +22,7 @@ import {
   ChatSubmitResult,
   getHeaders,
   LLMApi,
+  LLMModel,
   LLMUsage,
 } from "../api";
 import Locale from "../../locales";
@@ -24,8 +32,33 @@ import {
 } from "@fortaine/fetch-event-source";
 import { toYYYYMMDD_HHMMSS } from "@/app/utils";
 // import { prettyObject } from "@/app/utils/format";
+import { getClientConfig } from "@/app/config/client";
+import { makeAzurePath } from "@/app/azure";
+import {
+  RunEntity,
+  RunStepEntity,
+  ThreadMessageEntity,
+} from "@/app/api/openai/[...path]/assistant";
+
+export interface OpenAIListModelResponse {
+  object: string;
+  data: Array<{
+    id: string;
+    object: string;
+    root: string;
+  }>;
+}
+
+interface ComplexContentItem {
+  type: string;
+  text?: string;
+  image_url?: string;
+  imageUuid?: string;
+}
 
 export class ChatGPTApi implements LLMApi {
+  private disableListModels = true;
+
   path(path: string): string {
     const BASE_URL = process.env.BASE_URL;
     const mode = process.env.BUILD_MODE;
@@ -44,10 +77,49 @@ export class ChatGPTApi implements LLMApi {
 
   async chat(options: ChatOptions) {
     const plugins = options.plugins;
-    const messages = options.messages.map((v) => ({
-      role: v.role,
-      content: v.content,
-    }));
+    const isMessageStructComplex =
+      options.mask?.modelConfig?.messageStruct === "complex";
+    const messages = (
+      options.sessionUuid && options.userMessage // 如果是服务器同步会话，那么仅发送最近一条用户的message
+        ? [options.userMessage]
+        : options.messages
+    ).map((message) => {
+      if (!isMessageStructComplex) {
+        if (options.baseImages?.length > 0) {
+          return {
+            id: message.id,
+            role: message.role,
+            content: message.content,
+            fileIds: options.baseImages.map((img) => img.thirdpartId),
+          };
+        } else {
+          return {
+            id: message.id,
+            role: message.role,
+            content: message.content,
+          };
+        }
+      }
+      const content = [
+        {
+          type: "text",
+          text: message.content,
+        },
+      ] as ComplexContentItem[];
+      if (options.baseImages?.length > 0) {
+        options.baseImages.forEach((img) => {
+          content.push({
+            type: "imageUuid",
+            imageUuid: img.uuid,
+          });
+        });
+      }
+      return {
+        id: message.id,
+        role: message.role,
+        content,
+      };
+    });
 
     const modelConfig = {
       ...useAppConfig.getState().modelConfig,
@@ -72,6 +144,8 @@ export class ChatGPTApi implements LLMApi {
     }
 
     const requestPayload = {
+      sessionUuid: options.sessionUuid,
+      resend: options.resend,
       messages,
       stream: options.config.stream,
       model: modelConfig.model,
@@ -87,12 +161,32 @@ export class ChatGPTApi implements LLMApi {
           value: p.value,
         };
       }),
+      top_p: modelConfig.top_p,
+      mask: !options.mask
+        ? null
+        : options.sessionUuid
+          ? {
+              // 传递mask上下文
+              id: options.mask.id,
+              builtin: options.mask.builtin ? 1 : 0,
+              context: options.mask.context,
+            }
+          : null, // 没有session uuid的情况下messages中已经包含了mask上下文，所以无需传递
+      // assistantMessageId: options.botMessage?.id, // 同时告诉服务器bot message id，以便后续sync messages找到对应的条目
+      assistantUuid: options.assistantUuid,
+      threadUuid: options.threadUuid,
+      // max_tokens: Math.max(modelConfig.max_tokens, 1024),
+      // Please do not ask me why not send max_tokens, no reason, this param is just shit, I dont want to explain anymore.
+      // baseUrl: useAccessStore.getState().openaiUrl,
+      // maxIterations: options.agentConfig.maxIterations,
+      // returnIntermediateSteps: options.agentConfig.returnIntermediateSteps,
+      // useTools: options.agentConfig.useTools,
     };
 
     console.log("[Request] openai payload: ", requestPayload);
 
     const shouldStream = !!options.config.stream;
-    console.log("shouldStream", shouldStream);
+    // console.log("shouldStream", shouldStream);
     const controller = new AbortController();
     options.onController?.(controller);
 
@@ -114,12 +208,33 @@ export class ChatGPTApi implements LLMApi {
 
       if (shouldStream) {
         let responseText = "";
+        let remainText = "";
         let finished = false;
+
+        // animate response to make it looks smooth
+        function animateResponseText() {
+          if (finished || controller.signal.aborted) {
+            responseText += remainText;
+            console.log("[Response Animation] finished");
+            return;
+          }
+
+          if (remainText.length > 0) {
+            responseText += remainText[0];
+            remainText = remainText.slice(1);
+            options.onUpdate?.(responseText, remainText[0]);
+          }
+
+          requestAnimationFrame(animateResponseText);
+        }
+
+        // start animaion
+        animateResponseText();
 
         const finish = () => {
           if (!finished) {
-            options.onFinish(responseText);
             finished = true;
+            options.onFinish(responseText + remainText);
           }
         };
 
@@ -171,6 +286,7 @@ export class ChatGPTApi implements LLMApi {
             }
           },
           onmessage(msg) {
+            console.log("msg", msg);
             if (msg.data === "[DONE]" || finished) {
               return finish();
             }
@@ -180,13 +296,52 @@ export class ChatGPTApi implements LLMApi {
             }
             try {
               const json = JSON.parse(text);
-              const delta = json.choices?.at(0)?.delta.content;
-              if (delta) {
-                responseText += delta;
-                options.onUpdate?.(responseText, delta);
+              console.log("json", json);
+              if (json && json.isToolMessage) {
+                if (!json.isSuccess) {
+                  console.error("[Request]", msg.data);
+                  responseText = msg.data;
+                  throw Error(json.message);
+                }
+                options.onToolUpdate?.(json.toolName!, json.message);
+                return;
+              }
+              if (json.type) {
+                // assistant
+                if (json.type === "createRun") {
+                  options.onCreateRun!(json.run as RunEntity);
+                } else if (json.type === "updateRun") {
+                  options.onUpdateRun!(json.run as RunEntity);
+                } else if (json.type === "updateRunSteps") {
+                  options.onUpdateRunStep!(json.runSteps);
+                } else if (json.type === "updateMessages") {
+                  options.onUpdateMessages!(json.messages);
+                } else if (json.type === "errorResp") {
+                  options.onUpdate?.(JSON.stringify(json.resp), json.message);
+                }
+              } else if (json.choices) {
+                const delta = (
+                  json as {
+                    choices: Array<{
+                      delta: {
+                        content: string;
+                      };
+                    }>;
+                  }
+                ).choices?.at(0)?.delta.content;
+                if (delta) {
+                  remainText += delta;
+                }
+              } else {
+                if (json.from === "aichat") {
+                  responseText += text;
+                } else {
+                  responseText += json.message;
+                }
+                options.onUpdate?.(responseText, json.message);
               }
             } catch (e) {
-              console.error("[Request] parse error", text, msg);
+              console.error("[Request] parse error", text);
             }
           },
           onclose() {
@@ -207,7 +362,7 @@ export class ChatGPTApi implements LLMApi {
         options.onFinish(message);
       }
     } catch (e) {
-      console.log("[Request] failed to make a chat reqeust", e);
+      console.log("[Request] failed to make a chat request", e);
       options.onError?.(e as Error);
     }
   }
@@ -276,11 +431,37 @@ export class ChatGPTApi implements LLMApi {
       total: total.hard_limit_usd,
     } as LLMUsage;
   }
+
+  async models(): Promise<LLMModel[]> {
+    if (this.disableListModels) {
+      return DEFAULT_MODELS.slice();
+    }
+
+    const res = await fetch(this.path(OpenaiPath.ListModelPath), {
+      method: "GET",
+      headers: {
+        ...getHeaders(),
+      },
+    });
+
+    const resJson = (await res.json()) as OpenAIListModelResponse;
+    const chatModels = resJson.data?.filter((m) => m.id.startsWith("gpt-"));
+    console.log("[Models]", chatModels);
+
+    if (!chatModels) {
+      return [];
+    }
+
+    return chatModels.map((m) => ({
+      name: m.id,
+      available: true,
+    }));
+  }
   async handleDraw(options: ChatOptions, modelConfig: any): Promise<boolean> {
     options.onUpdate?.("请稍候……", "");
-    const userMessage = options.userMessage;
     const botMessage = options.botMessage;
     const content = options.content;
+    const mask = options.mask;
     const startFn = async (): Promise<boolean> => {
       const prompt = content; // .substring(3).trim();
       let action: string = "IMAGINE";
@@ -303,12 +484,12 @@ export class ChatGPTApi implements LLMApi {
         options.onFinish(Locale.Midjourney.TaskErrUnknownType);
         return false;
       }
-      botMessage.attr.action = action;
-      let actionIndex: any = null;
+      botMessage.attr.action = action as MessageAction;
+      let actionIndex: number | null = null;
       let actionDirection: string | null = null;
       let actionStrength: string | null = null;
-      let actionUseTaskId: any = null;
-      let zoomRatio: any = null;
+      let actionUseTaskId: string | null = null;
+      let zoomRatio: string | null = null;
       if (action === "VARIATION" || action == "UPSCALE" || action == "REROLL") {
         actionIndex = parseInt(
           prompt.substring(firstSplitIndex + 2, firstSplitIndex + 3),
@@ -325,6 +506,7 @@ export class ChatGPTApi implements LLMApi {
             body: JSON.stringify({
               ...body,
               model: modelConfig.model,
+              processMode: mask?.modelConfig.processMode,
             }),
           });
         };
@@ -337,12 +519,14 @@ export class ChatGPTApi implements LLMApi {
             break;
           }
           case "DESCRIBE": {
+            // 识图
             res = await reqFn("draw/describe", "POST", {
               fileUuid: options.baseImages[0].uuid,
             });
             break;
           }
           case "BLEND": {
+            // 混图
             const fileUuidArray = options.baseImages.map((ui: any) => ui.uuid);
             res = await reqFn("draw/blend", "POST", {
               fileUuidArray,
@@ -355,8 +539,8 @@ export class ChatGPTApi implements LLMApi {
               targetIndex: actionIndex,
               targetUuid: actionUseTaskId,
             });
-            botMessage.attr.targetIndex = actionIndex;
-            botMessage.attr.targetUuid = actionUseTaskId;
+            botMessage.attr.targetIndex = actionIndex! as TargetIndex;
+            botMessage.attr.targetUuid = actionUseTaskId!;
             break;
           }
           case "VARIATION": {
@@ -364,8 +548,8 @@ export class ChatGPTApi implements LLMApi {
               targetIndex: actionIndex,
               targetUuid: actionUseTaskId,
             });
-            botMessage.attr.targetIndex = actionIndex;
-            botMessage.attr.targetUuid = actionUseTaskId;
+            botMessage.attr.targetIndex = actionIndex! as TargetIndex;
+            botMessage.attr.targetUuid = actionUseTaskId!;
             break;
           }
           case "REROLL": {
@@ -375,6 +559,43 @@ export class ChatGPTApi implements LLMApi {
             });
             break;
           }
+<<<<<<< HEAD
+=======
+          case "ZOOMOUT": {
+            res = await reqFn("draw/zoomOut", "POST", {
+              zoomRatio: zoomRatio,
+              targetUuid: actionUseTaskId,
+            });
+            botMessage.attr.zoomRatio = zoomRatio!;
+            botMessage.attr.targetUuid = actionUseTaskId!;
+            break;
+          }
+          case "PAN": {
+            res = await reqFn("draw/pan", "POST", {
+              panDirection: actionDirection,
+              targetUuid: actionUseTaskId,
+            });
+            botMessage.attr.panDirection = actionDirection! as PanDirection;
+            botMessage.attr.targetUuid = actionUseTaskId!;
+            break;
+          }
+          case "SQUARE": {
+            res = await reqFn("draw/square", "POST", {
+              targetUuid: actionUseTaskId,
+            });
+            botMessage.attr.targetUuid = actionUseTaskId!;
+            break;
+          }
+          case "VARY": {
+            res = await reqFn("draw/vary", "POST", {
+              strength: actionStrength,
+              targetUuid: actionUseTaskId,
+            });
+            botMessage.attr.strength = actionStrength!;
+            botMessage.attr.targetUuid = actionUseTaskId!;
+            break;
+          }
+>>>>>>> origin/pro-v0.11.4
           default:
         }
         if (res == null) {
@@ -393,12 +614,6 @@ export class ChatGPTApi implements LLMApi {
         const resJson = await res.json();
         console.log("resJson", resJson);
         if (res.status < 200 || res.status >= 300 || resJson.code != 0) {
-          // options.onUpdate?.(Locale.Midjourney.TaskSubmitErr(
-          //   resJson?.message ||
-          //   resJson?.error ||
-          //   resJson?.description ||
-          //   Locale.Midjourney.UnknownError,
-          // ), '');
           botMessage.attr.code = resJson.code;
           options.onFinish(JSON.stringify(resJson));
           return false;
@@ -418,7 +633,6 @@ export class ChatGPTApi implements LLMApi {
             "",
           );
           return true;
-          // this.fetchDrawStatus(options.onUpdate, options.onFinish, botMessage);
         }
       } catch (e: any) {
         console.error(e);
@@ -438,12 +652,13 @@ export class ChatGPTApi implements LLMApi {
     return await startFn();
   }
   async fetchDrawStatus(
-    onUpdate: ((message: string, chunk: string) => void) | undefined,
+    onUpdate: (message: string, chunk: string) => void,
     onFinish: (message: string) => void,
     botMessage: ChatMessage,
   ) {
     const taskId = botMessage?.attr?.taskId;
     if (!taskId || ["SUCCESS", "FAILURE"].includes(botMessage?.attr?.status)) {
+<<<<<<< HEAD
       return;
     ChatFetchTaskPool[taskId] = setTimeout(async () => {
       ChatFetchTaskPool[taskId] = null;
@@ -558,6 +773,138 @@ export class ChatGPTApi implements LLMApi {
         // }
       }
     }, 3000);
+=======
+      return false;
+    }
+
+    const url = this.path(`draw/info?uuid=${taskId}`);
+    const statusRes = await fetch(url, {
+      method: "GET",
+      headers: getHeaders(),
+    });
+    const statusResJson = await statusRes.json();
+    console.log("statusResJson", statusResJson);
+    if (statusRes.status < 200 || statusRes.status >= 300) {
+      console.error("fetch status error", statusRes);
+      onFinish(
+        Locale.Midjourney.TaskStatusFetchFail +
+          ": " +
+          (statusResJson?.message ||
+            statusResJson?.error ||
+            statusResJson?.description) || Locale.Midjourney.UnknownReason,
+      );
+      return false;
+    } else {
+      let content;
+      if (!botMessage.attr.prompt || botMessage.attr.prompt === "") {
+        botMessage.attr.prompt = statusResJson.data.prompt;
+      }
+      const prefixContent = Locale.Midjourney.TaskPrefix(
+        botMessage.attr.prompt +
+          (statusResJson.data.type === "upscale"
+            ? "(UPSCALE::" +
+              botMessage.attr.targetIndex +
+              "::" +
+              botMessage.attr.targetUuid +
+              ")"
+            : statusResJson.data.type === "variation"
+              ? "(VARIATION::" +
+                botMessage.attr.targetIndex +
+                "::" +
+                botMessage.attr.targetUuid +
+                ")"
+              : statusResJson.data.type === "zoomOut"
+                ? "(ZOOMOUT::" +
+                  botMessage.attr.zoomRatio +
+                  "::" +
+                  botMessage.attr.targetUuid +
+                  ")"
+                : statusResJson.data.type === "pan"
+                  ? "(PAN::" +
+                    botMessage.attr.panDirection.toLocaleUpperCase() +
+                    "::" +
+                    botMessage.attr.targetUuid +
+                    ")"
+                  : statusResJson.data.type === "square"
+                    ? "(SQUARE::1::" + botMessage.attr.targetUuid + ")"
+                    : statusResJson.data.type === "vary"
+                      ? "(VARY::" +
+                        botMessage.attr.strength.toLocaleUpperCase() +
+                        "::" +
+                        botMessage.attr.targetUuid +
+                        ")"
+                      : ""),
+        taskId,
+      );
+      const state = statusResJson?.data?.state;
+      switch (state) {
+        case 30: {
+          // 成功
+          const result = JSON.parse(statusResJson.data.result);
+          let imgUrl = result.url;
+          if (imgUrl.startsWith("/")) {
+            imgUrl = "/api" + imgUrl;
+          }
+          const prompt = result.prompt; // 图生文
+
+          const entireContent =
+            statusResJson.data.type === "describe"
+              ? prefixContent + "\n" + prompt
+              : prefixContent + `[![${taskId}](${imgUrl})](${imgUrl})`;
+
+          botMessage.attr.imgUrl = imgUrl;
+          botMessage.attr.prompt = prompt;
+          botMessage.attr.status = "SUCCESS";
+          botMessage.attr.finished = true;
+          botMessage.attr.direction = statusResJson.data
+            .direction as AttrDirection;
+          onFinish(entireContent);
+          return false;
+        }
+        case 40: // 失败
+          content = statusResJson.data.error || Locale.Midjourney.UnknownReason;
+          botMessage.attr.status = "FAILURE";
+          botMessage.attr.finished = true;
+          onFinish(
+            prefixContent +
+              `**${
+                Locale.Midjourney.TaskStatus
+              }:** [${new Date().toLocaleString()}] - ${content}`,
+          );
+          return false;
+        case 0: // 待提交
+          content = Locale.Midjourney.TaskNotStart;
+          botMessage.attr.status = "NOT_START";
+          break;
+        case 20: // 第三方处理中
+          content = Locale.Midjourney.TaskProgressTip(
+            statusResJson.data.progress,
+          );
+          botMessage.attr.status = "IN_PROGRESS";
+          break;
+        case 10: // 已提交第三方
+          content = Locale.Midjourney.TaskRemoteSubmit;
+          botMessage.attr.status = "SUBMITTED";
+          break;
+        default:
+          content = statusResJson.status;
+      }
+
+      let entireContent =
+        prefixContent +
+        `**${
+          Locale.Midjourney.TaskStatus
+        }:** [${new Date().toLocaleString()}] - ${content}`;
+      if (statusResJson.data.state === 20 && statusResJson.data.result) {
+        const result = JSON.parse(statusResJson.data.result);
+        let imgUrl = result.url;
+        botMessage.attr.imgUrl = imgUrl;
+        entireContent += `\n[![${taskId}](${imgUrl})](${imgUrl})`;
+      }
+      onUpdate(entireContent, "");
+      return true;
+    }
+>>>>>>> origin/pro-v0.11.4
   }
 }
 export { OpenaiPath };

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { StoreKey } from "../constant";
+import { SPEED_MAP_KEY, StoreKey } from "../constant";
 
 export interface AiPlugin {
   id: number;
@@ -12,10 +12,32 @@ export interface AiPlugin {
   state: number;
 }
 
+export interface AiAssistant {
+  id: number;
+  uuid: string;
+  modelId: number;
+  apiKeyId: number;
+  name: string;
+  description: string;
+  instructions: string;
+  tools: string;
+  thirdpartId: string;
+  thirdpartInfo: string;
+  state: number;
+}
+
 export type ModelContentType = "Text" | "Image";
+export type ModelMessageStruct = "normal" | "complex";
 export interface SimpleModel {
   name: string;
+  desc?: string;
+  avatarEmoji: string;
   contentType: ModelContentType;
+  messageStruct: ModelMessageStruct;
+  summarizeModel: string | null;
+  processModes: SPEED_MAP_KEY[];
+  processMode: SPEED_MAP_KEY | null;
+  drawActions: DrawAction[];
 }
 
 export interface WebsiteConfigStore {
@@ -48,6 +70,8 @@ export interface WebsiteConfigStore {
   availableModels: SimpleModel[];
   defaultSystemTemplate?: string;
   plugins?: AiPlugin[];
+  assistants: AiAssistant[];
+  payChannels: string[];
   fetchWebsiteConfig: () => Promise<any>;
 }
 
@@ -81,12 +105,15 @@ export interface WebsiteConfig {
   defaultSystemTemplate: string;
   availableModels: SimpleModel[];
   plugins?: AiPlugin[];
+  assistants: AiAssistant[];
+  payChannels: string[];
 }
 export interface WebsiteConfigData {
   websiteContent: WebsiteConfig;
 }
 
 import { Response } from "../api/common";
+import { DrawAction } from ".";
 export type WebsiteConfigResponse = Response<WebsiteConfigData>;
 
 export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
@@ -121,6 +148,8 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
       redeemCodePageBottom: "",
       defaultSystemTemplate: "",
       plugins: [] as AiPlugin[],
+      assistants: [] as AiAssistant[],
+      payChannels: [] as string[],
 
       async fetchWebsiteConfig() {
         const url = "/globalConfig/website";
@@ -180,6 +209,8 @@ export const useWebsiteConfigStore = create<WebsiteConfigStore>()(
               availableModels: website.availableModels,
               defaultSystemTemplate: website.defaultSystemTemplate,
               plugins: website.plugins,
+              assistants: website.assistants,
+              payChannels: website.payChannels,
             }));
             return res;
           })

@@ -11,6 +11,7 @@ import CloseIcon from "../icons/close.svg";
 import DeleteIcon from "../icons/delete.svg";
 import EyeIcon from "../icons/eye.svg";
 import CopyIcon from "../icons/copy.svg";
+import DragIcon from "../icons/drag.svg";
 
 import {
   DEFAULT_MASK_AVATAR,
@@ -18,7 +19,14 @@ import {
   RemoteMask,
   useMaskStore,
 } from "../store/mask";
-import { ChatMessage, ModelConfig, useAppConfig, useChatStore } from "../store";
+import {
+  ChatMessage,
+  createMessage,
+  ModelConfig,
+  useAppConfig,
+  useAuthStore,
+  useChatStore,
+} from "../store";
 import { ROLES } from "../client/api";
 import {
   Input,
@@ -35,19 +43,40 @@ import { useNavigate } from "react-router-dom";
 
 import chatStyle from "./chat.module.scss";
 import { useEffect, useState } from "react";
-import { downloadAs, readFromFile } from "../utils";
+import { copyToClipboard, downloadAs, readFromFile } from "../utils";
 import { Updater } from "../typing";
 import { ModelConfigList } from "./model-config";
 import { FileName, Path } from "../constant";
 import { BUILTIN_MASK_STORE } from "../masks";
+import { nanoid } from "nanoid";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  OnDragEndResponder,
+} from "@hello-pangea/dnd";
+
+// drag and drop helper function
+function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
+  const result = [...list];
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
+}
 
 export function MaskAvatar(props: {
   mask: Mask | RemoteMask;
   logoUrl?: string;
 }) {
-  return props.mask.avatar !== DEFAULT_MASK_AVATAR ? (
+  // 如果后台配置了展示模型的头像，那么会传给mask.modelConfig?.avatarEmoji，此时优先显示展示模型的头像，忽略用户自己的配置
+  return props.mask.modelConfig?.avatarEmoji ? (
+    <Avatar avatar={props.mask.modelConfig?.avatarEmoji} />
+  ) : props.mask.avatar !== DEFAULT_MASK_AVATAR ? (
+    // mask.avatar !== DEFAULT_MASK_AVATAR 说明用户（或管理员在后台）自定义了头像，此时显示用户自己（或管理员）设定的头像
     <Avatar avatar={props.mask.avatar} logoUrl={props.logoUrl} />
   ) : (
+    // 当后台没有配置展示模型的头像，并且用户（或管理员）也没有自己重新设定面具时，传入model参数给Avatar，让Avatar自行判断
+    // 但好像这种情况已经不存在了，因为管理员在后台设定面具时，总会选择一个头像，不会等于DEFAULT_MASK_AVATAR
     <Avatar model={props.mask.modelConfig?.model} logoUrl={props.logoUrl} />
   );
 }
@@ -72,6 +101,11 @@ export function MaskConfig(props: {
       // if user changed current session mask, it will disable auto sync
       mask.syncGlobalConfig = false;
     });
+  };
+
+  const copyMaskLink = () => {
+    const maskLink = `${location.protocol}//${location.host}/#${Path.NewChat}?mask=${props.mask.id}`;
+    copyToClipboard(maskLink);
   };
 
   const globalConfig = useAppConfig();
@@ -121,6 +155,12 @@ export function MaskConfig(props: {
           ></input>
         </ListItem>
         <ListItem
+          title={Locale.Mask.Config.Description.title}
+          subTitle={Locale.Mask.Config.Description.SubTitle}
+        >
+          <span>{props.mask.description}</span>
+        </ListItem>
+        <ListItem
           title={Locale.Mask.Config.HideContext.Title}
           subTitle={Locale.Mask.Config.HideContext.SubTitle}
         >
@@ -134,6 +174,20 @@ export function MaskConfig(props: {
             }}
           ></input>
         </ListItem>
+
+        {!props.shouldSyncFromGlobal ? (
+          <ListItem
+            title={Locale.Mask.Config.Share.Title}
+            subTitle={Locale.Mask.Config.Share.SubTitle}
+          >
+            <IconButton
+              icon={<CopyIcon />}
+              text={Locale.Mask.Config.Share.Action}
+              onClick={copyMaskLink}
+            />
+          </ListItem>
+        ) : null}
+
         {props.shouldSyncFromGlobal ? (
           <ListItem
             title={Locale.Mask.Config.Sync.Title}
@@ -143,13 +197,18 @@ export function MaskConfig(props: {
               type="checkbox"
               checked={props.mask.syncGlobalConfig}
               onChange={async (e) => {
+                const checked = e.currentTarget.checked;
                 if (
-                  e.currentTarget.checked &&
+                  checked &&
                   (await showConfirm(Locale.Mask.Config.Sync.Confirm))
                 ) {
                   props.updateMask((mask) => {
-                    mask.syncGlobalConfig = e.currentTarget.checked;
+                    mask.syncGlobalConfig = checked;
                     mask.modelConfig = { ...globalConfig.modelConfig };
+                  });
+                } else if (!checked) {
+                  props.updateMask((mask) => {
+                    mask.syncGlobalConfig = checked;
                   });
                 }
               }}
@@ -170,6 +229,7 @@ export function MaskConfig(props: {
 }
 
 function ContextPromptItem(props: {
+  index: number;
   prompt: ChatMessage;
   update: (prompt: ChatMessage) => void;
   remove: () => void;
@@ -179,22 +239,27 @@ function ContextPromptItem(props: {
   return (
     <div className={chatStyle["context-prompt-row"]}>
       {!focusingInput && (
-        <Select
-          value={props.prompt.role}
-          className={chatStyle["context-role"]}
-          onChange={(e) =>
-            props.update({
-              ...props.prompt,
-              role: e.target.value as any,
-            })
-          }
-        >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </Select>
+        <>
+          <div className={chatStyle["context-drag"]}>
+            <DragIcon />
+          </div>
+          <Select
+            value={props.prompt.role}
+            className={chatStyle["context-role"]}
+            onChange={(e) =>
+              props.update({
+                ...props.prompt,
+                role: e.target.value as any,
+              })
+            }
+          >
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
+        </>
       )}
       <Input
         value={props.prompt.content}
@@ -233,8 +298,8 @@ export function ContextPrompts(props: {
 }) {
   const context = props.context;
 
-  const addContextPrompt = (prompt: ChatMessage) => {
-    props.updateContext((context) => context.push(prompt));
+  const addContextPrompt = (prompt: ChatMessage, i: number) => {
+    props.updateContext((context) => context.splice(i, 0, prompt));
   };
 
   const removeContextPrompt = (i: number) => {
@@ -245,33 +310,91 @@ export function ContextPrompts(props: {
     props.updateContext((context) => (context[i] = prompt));
   };
 
+  const onDragEnd: OnDragEndResponder = (result) => {
+    if (!result.destination) {
+      return;
+    }
+    const newContext = reorder(
+      context,
+      result.source.index,
+      result.destination.index,
+    );
+    props.updateContext((context) => {
+      context.splice(0, context.length, ...newContext);
+    });
+  };
+
   return (
     <>
       <div className={chatStyle["context-prompt"]} style={{ marginBottom: 20 }}>
-        {context.map((c, i) => (
-          <ContextPromptItem
-            key={i}
-            prompt={c}
-            update={(prompt) => updateContextPrompt(i, prompt)}
-            remove={() => removeContextPrompt(i)}
-          />
-        ))}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="context-prompt-list">
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                {context.map((c, i) => (
+                  <Draggable
+                    draggableId={c.id || i.toString()}
+                    index={i}
+                    key={c.id}
+                  >
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <ContextPromptItem
+                          index={i}
+                          prompt={c}
+                          update={(prompt) => updateContextPrompt(i, prompt)}
+                          remove={() => removeContextPrompt(i)}
+                        />
+                        <div
+                          className={chatStyle["context-prompt-insert"]}
+                          onClick={() => {
+                            addContextPrompt(
+                              createMessage({
+                                role: "user",
+                                content: "",
+                                id: nanoid(),
+                                date: new Date().toLocaleString(),
+                              }),
+                              i + 1,
+                            );
+                          }}
+                        >
+                          <AddIcon />
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
 
-        <div className={chatStyle["context-prompt-row"]}>
-          <IconButton
-            icon={<AddIcon />}
-            text={Locale.Context.Add}
-            bordered
-            className={chatStyle["context-prompt-button"]}
-            onClick={() =>
-              addContextPrompt({
-                role: "user",
-                content: "",
-                date: "",
-              })
-            }
-          />
-        </div>
+        {props.context.length === 0 && (
+          <div className={chatStyle["context-prompt-row"]}>
+            <IconButton
+              icon={<AddIcon />}
+              text={Locale.Context.Add}
+              bordered
+              className={chatStyle["context-prompt-button"]}
+              onClick={() =>
+                addContextPrompt(
+                  createMessage({
+                    role: "user",
+                    content: "",
+                    date: "",
+                  }),
+                  props.context.length,
+                )
+              }
+            />
+          </div>
+        )}
       </div>
     </>
   );
@@ -282,6 +405,7 @@ export function MaskPage() {
 
   const maskStore = useMaskStore();
   const chatStore = useChatStore();
+  const authStore = useAuthStore();
 
   const [filterLang, setFilterLang] = useState<Lang>();
 
@@ -290,14 +414,14 @@ export function MaskPage() {
   //   .getAll()
   //   .filter((m) => !filterLang || m.lang === filterLang);
   useEffect(() => {
-    maskStore.fetch().then((remoteMasks) => {
+    maskStore.fetch(authStore.token).then((remoteMasks) => {
       if (remoteMasks.length === 0) {
         setAllMasks(maskStore.getAll());
       } else {
         setAllMasks(remoteMasks);
       }
     });
-  }, [maskStore]);
+  }, [maskStore, authStore.token]);
 
   const [searchMasks, setSearchMasks] = useState<RemoteMask[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -323,16 +447,21 @@ export function MaskPage() {
 
   // };
 
-  const [editingMaskId, setEditingMaskId] = useState<number | undefined>();
+  const [editingMaskId, setEditingMaskId] = useState<
+    string | number | undefined
+  >();
   const editingMask =
     maskStore.get(editingMaskId) ??
     BUILTIN_MASK_STORE.get(editingMaskId) ??
     allMasks.filter((m) => m.id == editingMaskId)[0];
-  console.log("editingMask", editingMask, BUILTIN_MASK_STORE);
+  // console.log("editingMask", editingMask, BUILTIN_MASK_STORE);
   const closeMaskModal = () => setEditingMaskId(undefined);
 
   const downloadAll = () => {
-    downloadAs(JSON.stringify(searchMasks), FileName.Masks);
+    downloadAs(
+      JSON.stringify(searchMasks.filter((v) => !v.builtin)),
+      FileName.Masks,
+    );
   };
 
   const importFromFile = () => {
@@ -374,11 +503,13 @@ export function MaskPage() {
                 icon={<DownloadIcon />}
                 bordered
                 onClick={downloadAll}
+                text={Locale.UI.Export}
               />
             </div>
             <div className="window-action-button">
               <IconButton
                 icon={<UploadIcon />}
+                text={Locale.UI.Import}
                 bordered
                 onClick={() => importFromFile()}
               />
@@ -446,7 +577,7 @@ export function MaskPage() {
                     color: "var(--black)",
                   }}
                 >
-                  暂无面具
+                  暂无应用
                 </div>
               </div>
             )}
@@ -459,9 +590,10 @@ export function MaskPage() {
                   <div className={styles["mask-title"]}>
                     <div className={styles["mask-name"]}>{m.name}</div>
                     <div className={styles["mask-info"] + " one-line"}>
-                      {`${Locale.Mask.Item.Info(m.context?.length || 0)} / ${
-                        ALL_LANG_OPTIONS[m.lang]
-                      } / ${m.modelConfig?.model}`}
+                      {m.description ||
+                        `${Locale.Mask.Item.Info(m.context?.length || 0)} / ${
+                          ALL_LANG_OPTIONS[m.lang]
+                        } / ${m.modelConfig?.model}`}
                     </div>
                   </div>
                 </div>
@@ -470,9 +602,18 @@ export function MaskPage() {
                     icon={<AddIcon />}
                     text={Locale.Mask.Item.Chat}
                     type="second"
-                    onClick={() => {
-                      chatStore.newSession(m as Mask);
-                      navigate(Path.Chat);
+                    onClick={async () => {
+                      const result = await chatStore.newSession(
+                        authStore.token,
+                        () => {
+                          authStore.logout();
+                          navigate(Path.Login);
+                        },
+                        m as Mask,
+                      );
+                      if (result) {
+                        navigate(Path.Chat);
+                      }
                     }}
                   />
                   {m.builtin ? (
@@ -543,7 +684,7 @@ export function MaskPage() {
             <MaskConfig
               mask={editingMask}
               updateMask={(updater) =>
-                maskStore.update(editingMaskId!, updater)
+                maskStore.updateMask(editingMaskId!, updater)
               }
               readonly={editingMask.builtin}
             />

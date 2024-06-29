@@ -20,6 +20,7 @@ import {
   useWebsiteConfigStore,
   useWechatConfigStore,
   useAppConfig,
+  useChatStore,
 } from "../store";
 
 import Locale from "../locales";
@@ -37,6 +38,7 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
   const navigate = useNavigate();
   const authStore = useAuthStore();
   const accessStore = useAccessStore();
+  const chatStore = useChatStore();
   const wechatStore = useWechatConfigStore();
   const {
     loginPageSubTitle,
@@ -47,6 +49,7 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
   const registerType = registerTypes[0];
   const REG_TYPE_USERNAME_AND_EMAIL_WITH_CAPTCHA_AND_CODE =
     "UsernameAndEmailWithCaptchaAndCode";
+  const REG_TYPE_PHONE_WITH_CAPTCHA_AND_CODE = "PhoneWithCaptchaAndCode";
   const REG_TYPE_CLOSE = "Close";
 
   const [loadingUsage, setLoadingUsage] = useState(false);
@@ -102,6 +105,7 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [fetchingSessions, setFetchingSessions] = useState(false);
   function login() {
     if (username === "") {
       showToast(Locale.LoginPage.Toast.EmptyUserName);
@@ -115,13 +119,20 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
     showToast(Locale.LoginPage.Toast.Logining);
     authStore
       .login(username, password)
-      .then((result) => {
+      .then(async (result) => {
         if (result && result.code == 0) {
           showToast(Locale.LoginPage.Toast.Success);
-          navigate(Path.Chat);
-        } else if (result && result.code == 11151) {
-          showToast(result.cnMessage || result.message);
-        } else if (result && result.message) {
+          // console.log('result', authStore.token, result)
+          setFetchingSessions(true);
+          const syncResult = await chatStore.syncSessions(result.data.token);
+          setFetchingSessions(false);
+          if (syncResult) {
+            navigate(Path.Chat);
+          } else {
+            console.error("sync session failed");
+            authStore.logout();
+          }
+        } else if (result && (result.cnMessage || result.message)) {
           showToast(result.cnMessage || result.message);
         }
       })
@@ -219,15 +230,27 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
         <List>
           {!showWechatCode ? (
             <ListItem
-              title={Locale.LoginPage.Username.Title}
-              subTitle={Locale.LoginPage.Username.SubTitle}
+              title={
+                registerType === REG_TYPE_PHONE_WITH_CAPTCHA_AND_CODE
+                  ? Locale.LoginPage.UsernameOrPhone.Title
+                  : Locale.LoginPage.Username.Title
+              }
+              subTitle={
+                registerType === REG_TYPE_PHONE_WITH_CAPTCHA_AND_CODE
+                  ? Locale.LoginPage.UsernameOrPhone.SubTitle
+                  : Locale.LoginPage.Username.SubTitle
+              }
             >
               {authStore.token ? (
                 <span>{authStore.username}</span>
               ) : (
                 <SingleInput
                   value={username}
-                  placeholder={Locale.LoginPage.Username.Placeholder}
+                  placeholder={
+                    registerType === REG_TYPE_PHONE_WITH_CAPTCHA_AND_CODE
+                      ? Locale.LoginPage.UsernameOrPhone.Placeholder
+                      : Locale.LoginPage.Username.Placeholder
+                  }
                   onChange={(e) => {
                     setUsername(e.currentTarget.value);
                     //console.log(e)
@@ -263,10 +286,13 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
               <IconButton
                 type="primary"
                 text={
-                  authStore.token
-                    ? Locale.LoginPage.Actions.Logout
-                    : Locale.LoginPage.Actions.Login
+                  fetchingSessions
+                    ? Locale.LoginPage.FetchingSessions
+                    : authStore.token
+                      ? Locale.LoginPage.Actions.Logout
+                      : Locale.LoginPage.Actions.Login
                 }
+                disabled={loadingUsage}
                 block={true}
                 onClick={() => {
                   if (authStore.token) {
@@ -341,8 +367,9 @@ export function Login(props: { logoLoading: boolean; logoUrl?: string }) {
             <></>
           ) : (
             <>
-              {registerType ==
-                REG_TYPE_USERNAME_AND_EMAIL_WITH_CAPTCHA_AND_CODE && (
+              {(registerType ==
+                REG_TYPE_USERNAME_AND_EMAIL_WITH_CAPTCHA_AND_CODE ||
+                registerType === REG_TYPE_PHONE_WITH_CAPTCHA_AND_CODE) && (
                 <ListItem>
                   <IconButton
                     text={Locale.LoginPage.ForgetPassword}
